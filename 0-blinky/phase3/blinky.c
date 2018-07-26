@@ -22,19 +22,46 @@ static void spin_sleep_ms(unsigned int ms)
   spin_sleep_us(ms * 1000);
 }
 
-static void fsel_out(unsigned int pin_num)
+static void fsel_set(unsigned int pin_num, unsigned int set)
 {
+  if (pin_num > 53)
+    return;
   // each 32-bit wide space fits 10 FSEL, and our mask is size 3
   unsigned int shift = (pin_num % 10) * 3;
   // to get which FSEL(n), integer div by 10 the pin number, as they are in chunks of 10
   unsigned int offset = pin_num / 10;
-  *(GPIO_FSEL0 + offset) |= (GPIO_OUT << shift);
+  *(GPIO_FSEL0 + offset) &= ~(GPIO_MASK << shift);
+  *(GPIO_FSEL0 + offset) |= (set << shift);
   return;
 }
 
-static void set_pin(unsigned int pin_num, unsigned int val)
+static void fsel_in(unsigned int pin_num)
 {
-  *GPIO_SET0 = val << pin_num;
+  fsel_set(pin_num, GPIO_IN);
+}
+
+static void fsel_out(unsigned int pin_num)
+{
+  fsel_set(pin_num, GPIO_OUT);
+}
+
+// There are 2 registers each for SET & CLR. We figure out the offset by num `mod` address_width
+static void pin_set(unsigned int pin_num)
+{
+  if (pin_num > 53)
+    return;
+  unsigned int set_num = pin_num % 32;
+  *(GPIO_SET0 + set_num) = 1 << pin_num;
+  return;
+}
+
+static void pin_clear(unsigned int pin_num)
+{
+  if (pin_num > 53)
+    return;
+  unsigned int set_num = pin_num % 32;
+  *(GPIO_CLR0 + set_num) = 1 << pin_num;
+  return;
 }
 // Q: Now, read the documentation for GPFSELn register on pages 91 and 92.
 // We write to this register to set up a pin as an output or input.
@@ -45,13 +72,14 @@ static void set_pin(unsigned int pin_num, unsigned int val)
 int main(void)
 {
   // STEP 1: Set GPIO Pin 16 as output.
-  *GPIO_FSEL1 |= 0b001 << 18;
+  //*GPIO_FSEL1 |= 0b001 << 18;
+  fsel_out(16);
   // STEP 2: Continuously set and clear GPIO 16.
   while (1)
   {
-    *GPIO_SET0 |= 1 << 16;
-    spin_sleep_us(100);
-    *GPIO_CLR0 |= 1 << 16;
-    spin_sleep_us(100);
+    pin_set(16);
+    spin_sleep_ms(1);
+    pin_clear(16);
+    spin_sleep_ms(1);
   }
 }
