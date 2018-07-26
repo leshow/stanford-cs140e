@@ -28,7 +28,7 @@ static void fsel_out(unsigned int pin_num)
   unsigned int shift = (pin_num % 10) * 3;
   // to get which FSEL(n), integer div by 10 the pin number, as they are in chunks of 10
   unsigned int offset = pin_num / 10;
-  GPIO_FSEL0[offset] |= (GPIO_OUT << shift);
+  *(GPIO_FSEL0 + offset) |= (GPIO_OUT << shift);
   return;
 }
 
