@@ -3,7 +3,6 @@
 #![no_std]
 
 extern crate compiler_builtins;
-
 pub mod lang_items;
 
 const GPIO_BASE: usize = 0x3F000000 + 0x200000;
@@ -28,11 +27,12 @@ fn spin_sleep_ms(ms: usize) {
 
 pub struct GPIO {
     pin: usize,
-    mode: Mode
+    mode: Mode,
 }
 
 enum Mode {
-    In, Out
+    In,
+    Out,
 }
 
 impl Mode {
@@ -46,31 +46,42 @@ impl Mode {
 
 impl GPIO {
     pub fn new(pin: usize, mode: Mode) -> GPIO {
-        if pin > 53 {
-            assert!("Unable to set a pin that high, pin 52 is the max");
-        }
+        assert!(pin <= 53, "Pin out of range");
         let shift = (pin % 10) * 3;
-        let offset = pin  10;
+        let offset = pin / 10;
         let gpio_pin: *mut u32 = GPIO_FSEL0.offset(offset);
-        let gpio_cur: u32 = gpio_pin.read_volatile();
         unsafe {
+            let gpio_cur: u32 = gpio_pin.read_volatile();
             let val = gpio_cur & !(GPIO_MASK << shift);
             gpio_pin.write_volatile(val | (mode.get_flag() << shift));
+            return GPIO { pin, mode };
+        }
+    }
 
-            return GPIO {
-                pin,
-                mode
-            }
+    pub fn set(&self) {
+        let offset = self.pin % 32;
+        unsafe {
+            GPIO_SET0.add(offset).write_volatile(1 << self.pin);
+        }
+    }
+
+    pub fn clear(&self) {
+        let offset = self.pin % 32;
+        unsafe {
+            GPIO_CLR0.add(offset).write_volatile(1 << self.pin);
         }
     }
 }
-
-
-
 
 #[no_mangle]
 pub unsafe extern "C" fn kmain() {
     // STEP 1: Set GPIO Pin 16 as output.
     let pin = GPIO::new(16, Mode::Out);
     // STEP 2: Continuously set and clear GPIO 16.
+    loop {
+        pin.set();
+        spin_sleep_ms(1000);
+        pin.clear();
+        spin_sleep_ms(1000);
+    }
 }
