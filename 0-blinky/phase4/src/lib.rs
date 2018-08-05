@@ -52,8 +52,8 @@ impl GPIO {
         let gpio_pin: *mut u32 = GPIO_FSEL0.offset(offset);
         unsafe {
             let gpio_cur: u32 = gpio_pin.read_volatile();
-            let val = gpio_cur & !(GPIO_MASK << shift);
-            gpio_pin.write_volatile(val | (mode.get_flag() << shift));
+            let val = (gpio_cur & !(GPIO_MASK << shift)) | (mode.get_flag() << shift);
+            gpio_pin.write_volatile(val);
             return GPIO { pin, mode };
         }
     }
