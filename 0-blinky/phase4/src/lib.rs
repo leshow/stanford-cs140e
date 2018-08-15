@@ -59,14 +59,14 @@ impl GPIO {
     }
 
     pub fn set(&self) {
-        let offset = self.pin % 32;
+        let offset = self.pin / 32;
         unsafe {
             GPIO_SET0.add(offset).write_volatile(1 << self.pin);
         }
     }
 
     pub fn clear(&self) {
-        let offset = self.pin % 32;
+        let offset = self.pin / 32;
         unsafe {
             GPIO_CLR0.add(offset).write_volatile(1 << self.pin);
         }

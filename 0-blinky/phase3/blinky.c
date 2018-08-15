@@ -49,7 +49,7 @@ static void pin_set(unsigned int pin_num)
 {
   if (pin_num > 53)
     return;
-  unsigned int set_num = pin_num % 32;
+  unsigned int set_num = pin_num / 32;
   *(GPIO_SET0 + set_num) = 1 << pin_num; // same as GPIO_SET0[set_num]
   return;
 }
@@ -58,7 +58,7 @@ static void pin_clear(unsigned int pin_num)
 {
   if (pin_num > 53)
     return;
-  unsigned int set_num = pin_num % 32;
+  unsigned int set_num = pin_num / 32;
   *(GPIO_CLR0 + set_num) = 1 << pin_num;
   return;
 }
