@@ -30,7 +30,7 @@ static void fsel_set(unsigned int pin_num, unsigned int set)
   unsigned int shift = (pin_num % 10) * 3;
   // to get which FSEL(n), integer div by 10 the pin number, as they are in chunks of 10
   unsigned int offset = pin_num / 10;
-  *(GPIO_FSEL0 + offset) = ((*GPIO_FSEL0 + offset) & ~(GPIO_MASK << shift)) | (set << shift);
+  *(GPIO_FSEL0 + offset) = (*(GPIO_FSEL0 + offset) & ~(GPIO_MASK << shift)) | (set << shift);
   return;
 }
 
@@ -50,7 +50,7 @@ static void pin_set(unsigned int pin_num)
   if (pin_num > 53)
     return;
   unsigned int set_num = pin_num % 32;
-  *(GPIO_SET0 + set_num) = 1 << pin_num;
+  *(GPIO_SET0 + set_num) = 1 << pin_num; // same as GPIO_SET0[set_num]
   return;
 }
 
@@ -71,7 +71,7 @@ static void pin_clear(unsigned int pin_num)
 int main(void)
 {
   // STEP 1: Set GPIO Pin 16 as output.
-  fsel_out(16);
+  fsel_out(16); // *GPIO_FSEL1 |= 0b001 << 18;
   // STEP 2: Continuously set and clear GPIO 16.
   while (1)
   {
