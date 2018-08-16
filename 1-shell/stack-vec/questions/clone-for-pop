@@ -1,0 +1,1 @@
+pop() calls clone on the value it returns, so it requires a Clone bound on T.

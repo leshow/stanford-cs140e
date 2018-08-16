@@ -4,6 +4,10 @@
 #[cfg(test)]
 mod tests;
 
+use core::iter::IntoIterator;
+use core::ops::{Deref, DerefMut};
+use core::slice::Iter;
+
 /// A contiguous array type backed by a slice.
 ///
 /// `StackVec`'s functionality is similar to that of `std::Vec`. You can `push`
@@ -63,12 +67,12 @@ impl<'a, T: 'a> StackVec<'a, T> {
 
     /// Extracts a slice containing the entire vector.
     pub fn as_slice(&self) -> &[T] {
-        &self.storage[..]
+        &self.storage[0..self.len]
     }
 
     /// Extracts a mutable slice of the entire vector.
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        &mut self.storage[..]
+        &mut self.storage[0..self.len]
     }
 
     /// Returns the number of elements in the vector, also referred to as its
@@ -118,4 +122,31 @@ impl<'a, T: Clone + 'a> StackVec<'a, T> {
 }
 
 // FIXME: Implement `Deref`, `DerefMut`, and `IntoIterator` for `StackVec`.
+impl<'a, T> Deref for StackVec<'a, T> {
+    type Target = [T];
+    fn deref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<'a, T> DerefMut for StackVec<'a, T> {
+    fn deref_mut(&mut self) -> &mut [T] {
+        self.as_mut_slice()
+    }
+}
+
+impl<'a, T> IntoIterator for StackVec<'a, T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.storage[..].into_iter()
+    }
+}
 // FIXME: Implement IntoIterator` for `&StackVec`.
+impl<'a, T> IntoIterator for &'a StackVec<'a, T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.storage[..].into_iter()
+    }
+}

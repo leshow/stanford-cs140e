@@ -1,0 +1,1 @@
+I believe it's because our push can fail. stackvec has a defined size.

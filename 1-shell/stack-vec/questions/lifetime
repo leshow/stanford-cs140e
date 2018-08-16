@@ -1,0 +1,1 @@
+A lifetime is required because T can also be a reference. In that case, T must be bound by the lifetime of 'a
