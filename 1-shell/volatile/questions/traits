@@ -1,0 +1,1 @@
+Traits allow us to reuse default impls and create supertrait relationships between methods. For instance how ReadWriteVolatile is a parent of ReadVolatile and WriteVolatile. We can also bound on the traits generically and accept all ReadVolatile (for example) types the same.

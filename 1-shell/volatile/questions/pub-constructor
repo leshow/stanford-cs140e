@@ -1,0 +1,1 @@
+If we enforce creation with `new` we allow the method to be marked unsafe and it's invariants to be documented

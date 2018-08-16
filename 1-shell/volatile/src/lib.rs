@@ -1,6 +1,6 @@
 #![feature(const_fn)]
 #![feature(decl_macro)]
-#![feature(unique)]
+// #![feature(unique)]
 #![feature(ptr_internals)]
 #![no_std]
 
@@ -26,8 +26,9 @@ pub trait Readable<T> {
     /// This is equivalent to `(self.read() & mask) == mask`.
     #[inline(always)]
     fn has_mask(&self, mask: T) -> bool
-        where T: ::core::ops::BitAnd<Output = T>,
-              T: PartialEq + Copy
+    where
+        T: ::core::ops::BitAnd<Output = T>,
+        T: PartialEq + Copy,
     {
         (self.read() & mask) == mask
     }
@@ -50,8 +51,9 @@ pub trait Writeable<T> {
 
 /// Trait implemented by **readable _and_ writeable** volatile wrappers.
 pub trait ReadableWriteable<T>: Readable<T> + Writeable<T>
-    where T: ::core::ops::BitAnd<Output = T>,
-          T: ::core::ops::BitOr<Output = T>
+where
+    T: ::core::ops::BitAnd<Output = T>,
+    T: ::core::ops::BitOr<Output = T>,
 {
     /// Applies the mask `mask` using `&` to the value referred to by `self`.
     /// This is equivalent to `self.write(self.read() & mask)`.
@@ -71,7 +73,10 @@ pub trait ReadableWriteable<T>: Readable<T> + Writeable<T>
 #[doc(hidden)]
 macro readable_writeable($type:ident, $self:ident.$($impl:tt)+) {
     impl<T> ReadableWriteable<T> for $type<T>
-        where T: ::core::ops::BitAnd<Output = T>, T: ::core::ops::BitOr<Output = T> { }
+    where
+        T: ::core::ops::BitAnd<Output = T>,
+        T: ::core::ops::BitOr<Output = T>,
+    {}
 }
 
 #[doc(hidden)]
@@ -92,7 +97,7 @@ macro writeable($type:ident, $self:ident.$($impl:tt)+) {
 /// pointer.
 pub struct ReadVolatile<T>(*const T);
 readable!(ReadVolatile, self.0);
-unsafe impl<T: Send> Send for ReadVolatile<T> {  }
+unsafe impl<T: Send> Send for ReadVolatile<T> {}
 
 impl<T> ReadVolatile<T> {
     /// Returns a new `ReadVolatile` that allows volatile read-only access to
@@ -112,7 +117,7 @@ impl<T> ReadVolatile<T> {
 /// pointer.
 pub struct WriteVolatile<T>(*mut T);
 writeable!(WriteVolatile, self.0);
-unsafe impl<T: Send> Send for WriteVolatile<T> {  }
+unsafe impl<T: Send> Send for WriteVolatile<T> {}
 
 impl<T> WriteVolatile<T> {
     /// Returns a new `WriteVolatile` that allows volatile write-only access to
@@ -135,7 +140,7 @@ pub struct Volatile<T>(*mut T);
 readable!(Volatile, self.0);
 writeable!(Volatile, self.0);
 readable_writeable!(Volatile, self.0);
-unsafe impl<T: Send> Send for Volatile<T> {  }
+unsafe impl<T: Send> Send for Volatile<T> {}
 
 impl<T> Volatile<T> {
     /// Returns a new `Volatile` that allows volatile read/write access to
