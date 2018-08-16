@@ -1,0 +1,1 @@
+Any test which uses the & operator on stackvec will fail if Deref is not implemented; the indexing tests: indexing, mut_indexing, index_oob, index_oob_after_truncate. iter also fails without Deref.
