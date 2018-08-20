@@ -18,4 +18,4 @@ pub enum Progress {
 pub type ProgressFn = fn(Progress);
 
 /// Noop progress callback.
-pub fn noop(_: Progress) {  }
+pub fn noop(_: Progress) {}
