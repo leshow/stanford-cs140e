@@ -1,8 +1,13 @@
-#![feature(compiler_builtins_lib, lang_items, asm, pointer_methods)]
+#![feature(
+    panic_implementation, // TODO: test me
+    compiler_builtins_lib,
+    lang_items,
+    asm,
+    pointer_methods
+)]
 #![no_builtins]
 #![no_std]
-
-extern crate compiler_builtins;
+// extern crate compiler_builtins;
 pub mod lang_items;
 
 const GPIO_BASE: usize = 0x3F000000 + 0x200000;
