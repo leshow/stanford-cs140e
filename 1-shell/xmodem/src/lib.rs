@@ -257,7 +257,7 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             ));
         }
         if !self.started {
-            self.write_byte(NAK);
+            self.write_byte(NAK)?;
             self.started = true;
             (self.progress)(Progress::Started);
         }
@@ -270,10 +270,12 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             }
             SOH => {
                 let packet = self.packet;
-                let pack_num = self.expect_byte(packet, "Packet number doesn't match")?;
-                let ones_pack_num =
-                    self.expect_byte(!pack_num, "Ones complement packet number doesn't match")?;
-                if ones_pack_num + pack_num == 255 {
+                let pack_num = self.expect_byte_or_cancel(packet, "Packet number doesn't match")?;
+                let ones_pack_num = self.expect_byte_or_cancel(
+                    !pack_num,
+                    "Ones complement packet number doesn't match",
+                )?;
+                if ones_pack_num + pack_num != 255 {
                     self.write_byte(CAN)?;
                 }
                 self.inner.read_exact(buf)?;
@@ -332,7 +334,39 @@ impl<T: io::Read + io::Write> Xmodem<T> {
     ///
     /// An error of kind `Interrupted` is returned if a packet checksum fails.
     pub fn write_packet(&mut self, buf: &[u8]) -> io::Result<usize> {
-        unimplemented!()
+        if buf.len() < 128 && buf.len() != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "buffer length is less than 128",
+            ));
+        }
+        if !self.started {
+            (self.progress)(Progress::Waiting);
+            self.expect_byte(NAK, "Expected NAK to start transmission")?;
+            self.started = true;
+        }
+        if buf.is_empty() {
+            self.write_byte(EOT)?;
+            self.expect_byte(NAK, "Expected NAK to end transmission")?;
+            self.write_byte(EOT)?;
+            self.expect_byte(ACK, "Expected ACK to end tranmsission")?;
+            self.started = false;
+            return Ok(0);
+        } else {
+            self.write_byte(SOH)?;
+            let packet = self.packet;
+            self.write_byte(packet)?;
+            self.write_byte(!packet)?;
+            self.inner.write(buf)?;
+            let sum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
+            //let checksum = sum % 255;
+            self.write_byte(checksum)?;
+            match self.read_byte(true)? {
+                NAK => unimplemented!(),
+                ACK => Ok(128),
+                _ => unimplemented!(),
+            }
+        }
     }
 
     /// Flush this output stream, ensuring that all intermediately buffered
