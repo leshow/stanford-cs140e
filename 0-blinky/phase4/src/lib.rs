@@ -49,7 +49,7 @@ impl GPIO {
         assert!(pin <= 53, "Pin out of range");
         let shift = (pin % 10) * 3;
         let offset = pin / 10;
-        let gpio_pin: *mut u32 = GPIO_FSEL0.offset(offset);
+        let gpio_pin: *mut u32 = GPIO_FSEL0.offset(offset as isize);
         unsafe {
             let gpio_cur: u32 = gpio_pin.read_volatile();
             let val = (gpio_cur & !(GPIO_MASK << shift)) | (mode.get_flag() << shift);
