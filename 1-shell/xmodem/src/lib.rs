@@ -129,7 +129,8 @@ impl<T> Xmodem<T, ()>
 where
     T: io::Read + io::Write,
 {
-    pub fn new(inner: T) -> Xmodem<T, fn(Progress)> {
+    pub fn new(inner: T) -> Xmodem<T, impl Fn(Progress)> {
+        // Xmodem<T, fn(Progress)> works also, but since we have access to existentials lets use them
         Xmodem {
             packet: 1,
             started: false,
