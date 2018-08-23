@@ -15,17 +15,15 @@ const ACK: u8 = 0x06;
 const NAK: u8 = 0x15;
 const CAN: u8 = 0x18;
 
-const MASK: u8 = 0b00000011;
-
 /// Implementation of the XMODEM protocol.
-pub struct Xmodem<R> {
+pub struct Xmodem<R, F> {
     packet: u8,
     inner: R,
     started: bool,
-    progress: ProgressFn,
+    progress: F,
 }
 
-impl Xmodem<()> {
+impl Xmodem<(), ()> {
     /// Transmits `data` to the receiver `to` using the XMODEM protocol. If the
     /// length of the total data yielded by `data` is not a multiple of 128
     /// bytes, the data is padded with zeroes and sent to the receiver.
@@ -48,10 +46,11 @@ impl Xmodem<()> {
     /// the transmission. See the [`Progress`] enum for more information.
     ///
     /// Returns the number of bytes written to `to`, excluding padding zeroes.
-    pub fn transmit_with_progress<R, W>(mut data: R, to: W, f: ProgressFn) -> io::Result<usize>
+    pub fn transmit_with_progress<R, W, F>(mut data: R, to: W, f: F) -> io::Result<usize>
     where
         W: io::Read + io::Write,
         R: io::Read,
+        F: Fn(Progress),
     {
         let mut transmitter = Xmodem::new_with_progress(to, f);
         let mut packet = [0u8; 128];
@@ -96,10 +95,11 @@ impl Xmodem<()> {
     ///
     /// The function `f` is used as a callback to indicate progress throughout
     /// the reception. See the [`Progress`] enum for more information.
-    pub fn receive_with_progress<R, W>(from: R, mut into: W, f: ProgressFn) -> io::Result<usize>
+    pub fn receive_with_progress<R, W, F>(from: R, mut into: W, f: F) -> io::Result<usize>
     where
         R: io::Read + io::Write,
         W: io::Write,
+        F: Fn(Progress),
     {
         let mut receiver = Xmodem::new_with_progress(from, f);
         let mut packet = [0u8; 128];
@@ -125,11 +125,11 @@ impl Xmodem<()> {
     }
 }
 
-impl<T: io::Read + io::Write> Xmodem<T> {
-    /// Returns a new `Xmodem` instance with the internal reader/writer set to
-    /// `inner`. The returned instance can be used for both receiving
-    /// (downloading) and sending (uploading).
-    pub fn new(inner: T) -> Self {
+impl<T> Xmodem<T, ()>
+where
+    T: io::Read + io::Write,
+{
+    pub fn new(inner: T) -> Xmodem<T, fn(Progress)> {
         Xmodem {
             packet: 1,
             started: false,
@@ -137,13 +137,23 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             progress: progress::noop,
         }
     }
+}
+
+impl<T, F> Xmodem<T, F>
+where
+    T: io::Read + io::Write,
+    F: Fn(Progress),
+{
+    /// Returns a new `Xmodem` instance with the internal reader/writer set to
+    /// `inner`. The returned instance can be used for both receiving
+    /// (downloading) and sending (uploading).
 
     /// Returns a new `Xmodem` instance with the internal reader/writer set to
     /// `inner`. The returned instance can be used for both receiving
     /// (downloading) and sending (uploading). The function `f` is used as a
     /// callback to indicate progress throughout the transfer. See the
     /// [`Progress`] enum for more information.
-    pub fn new_with_progress(inner: T, f: ProgressFn) -> Self {
+    pub fn new_with_progress(inner: T, f: F) -> Self {
         Xmodem {
             packet: 1,
             started: false,
