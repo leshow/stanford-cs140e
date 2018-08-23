@@ -198,11 +198,11 @@ impl<T: io::Read + io::Write> Xmodem<T> {
     /// or if writing the `CAN` byte failed on byte mismatch.
     fn expect_byte_or_cancel(&mut self, byte: u8, msg: &'static str) -> io::Result<u8> {
         match self.expect_byte(byte, msg) {
-            b => b,
             Err(e) => {
                 self.write_byte(CAN)?;
                 Err(e)
             }
+            b => b,
         }
     }
 
@@ -218,7 +218,7 @@ impl<T: io::Read + io::Write> Xmodem<T> {
     /// of `ConnectionAborted` is returned. Otherwise, the error kind is
     /// `InvalidData`.
     fn expect_byte(&mut self, byte: u8, expected: &'static str) -> io::Result<u8> {
-        let received = self.read_byte(true)?; // byte != CAN  ?
+        let received = self.read_byte(byte != CAN)?; // byte != CAN  ?
         if received == byte {
             Ok(received)
         } else {
@@ -266,7 +266,8 @@ impl<T: io::Read + io::Write> Xmodem<T> {
                 self.write_byte(NAK)?;
                 self.expect_byte(EOT, "Expected EOT")?;
                 self.write_byte(ACK)?;
-                Ok(128)
+                self.started = false;
+                Ok(0)
             }
             SOH => {
                 let packet = self.packet;
@@ -282,7 +283,7 @@ impl<T: io::Read + io::Write> Xmodem<T> {
                 let sum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
                 let checksum = self.read_byte(false)?;
 
-                if checksum != (sum & MASK) {
+                if checksum != sum {
                     // compare last 2 sig dig of sum
                     self.write_byte(NAK)?;
                     Err(io::Error::new(
@@ -357,14 +358,22 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             let packet = self.packet;
             self.write_byte(packet)?;
             self.write_byte(!packet)?;
+
             self.inner.write(buf)?;
-            let sum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
-            //let checksum = sum % 255;
+            let checksum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
             self.write_byte(checksum)?;
+
             match self.read_byte(true)? {
-                NAK => unimplemented!(),
-                ACK => Ok(128),
-                _ => unimplemented!(),
+                NAK => Err(io::Error::new(io::ErrorKind::InvalidData, "Retries failed")),
+                ACK => {
+                    (self.progress)(Progress::Packet(packet));
+                    self.packet = self.packet.wrapping_add(1);
+                    Ok(128)
+                }
+                _ => Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Expected ACK or NAK to send next packet",
+                )),
             }
         }
     }
