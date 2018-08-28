@@ -1,6 +1,6 @@
-// This was my first attempt to polymorphicall get the input src from
-// either File or stdin. It probably better represents the abstraction
-// but for such a small bit of code, I'll just use Box<BufRead>
+// This was my first attempt to polymorphically get the input src from
+// either File or Stdin. It better encapsulates things but
+// for such a small bit of code, I'll just use Box<dyn BufRead>
 use std::{
     fs::File,
     io::{self, BufRead},

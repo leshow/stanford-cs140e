@@ -1,4 +1,4 @@
-extern crate pbr;
+extern crate indicatif;
 extern crate serial;
 extern crate structopt;
 extern crate xmodem;
@@ -7,13 +7,13 @@ extern crate structopt_derive;
 
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader},
     path::PathBuf,
-    sync::RwLock,
     time::Duration,
+    time::Instant,
 };
 
-use pbr::{ProgressBar, Units};
+use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use serial::core::{BaudRate, CharSize, FlowControl, SerialDevice, SerialPortSettings, StopBits};
 use structopt::StructOpt;
 
@@ -86,6 +86,7 @@ struct Opt {
 }
 
 fn main() -> io::Result<()> {
+    let start = Instant::now();
     let opt = Opt::from_args();
     let mut serial = serial::open(&opt.tty_path).expect("path points to invalid TTY");
 
@@ -102,9 +103,8 @@ fn main() -> io::Result<()> {
         None => Box::new(BufReader::new(io::stdin())),
         Some(input) => Box::new(BufReader::new(File::open(input).expect("Error with path"))),
     };
-    let buf_len = reader.buffer().len();
-    let mut pb = ProgressBar::new(buf_len);
-    pb.set_units(Units::Bytes);
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(ProgressStyle::default_spinner());
 
     if opt.raw {
         let total_bytes = io::copy(&mut reader, &mut serial)?;
@@ -113,18 +113,19 @@ fn main() -> io::Result<()> {
         let total_bytes =
             Xmodem::transmit_with_progress(reader, serial, |progress| match progress {
                 Progress::Started => {
-                    println!("Starting transmission...");
+                    pb.set_message("Starting transmission...");
                 }
-                Progress::Waiting => {
+                Progress::Waiting => {}
+                Progress::Packet(_pkt) => {
                     pb.tick();
                 }
-                Progress::Packet(pkt) => {
-                    // println!("wrote: {} bytes to input", pkt);
-                    pb.set((pkt % 255) as u64);
-                }
             })?;
-        println!("Wrote {} bytes", total_bytes);
-        pb.finish();
+        let msg = format!(
+            "Wrote {} bytes in {}",
+            total_bytes,
+            HumanDuration(start.elapsed())
+        );
+        pb.finish_with_message(&msg[..]);
     }
     Ok(())
 }
