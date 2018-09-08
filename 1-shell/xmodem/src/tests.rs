@@ -48,7 +48,7 @@ fn test_loop() {
     }
 
     let (tx, rx) = pipe();
-    let tx_thread = std::thread::spawn(move || Xmodem::transmit(&input[..], rx));
+    let tx_thread = std::thread::spawn(move || Xmodem::transmit(&input[..], rx)); // <FnOnce<(Progress)>>::Output = ()
     let rx_thread = std::thread::spawn(move || {
         let mut output = [0u8; 384];
         Xmodem::receive(tx, &mut output[..]).map(|_| output)
