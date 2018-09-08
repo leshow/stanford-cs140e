@@ -18,20 +18,14 @@ const CAN: u8 = 0x18;
 const MASK: u8 = 0b00000011;
 
 /// Implementation of the XMODEM protocol.
-pub struct Xmodem<R, F>
-where
-    F: FnMut(Progress),
-{
+pub struct Xmodem<R, F> {
     packet: u8,
     inner: R,
     started: bool,
     progress: F,
 }
 
-impl<F> Xmodem<(), F>
-where
-    F: FnMut(Progress),
-{
+impl Xmodem<(), ()> {
     /// Transmits `data` to the receiver `to` using the XMODEM protocol. If the
     /// length of the total data yielded by `data` is not a multiple of 128
     /// bytes, the data is padded with zeroes and sent to the receiver.
@@ -54,10 +48,11 @@ where
     /// the transmission. See the [`Progress`] enum for more information.
     ///
     /// Returns the number of bytes written to `to`, excluding padding zeroes.
-    pub fn transmit_with_progress<R, W>(mut data: R, to: W, f: F) -> io::Result<usize>
+    pub fn transmit_with_progress<R, W, F>(mut data: R, to: W, f: F) -> io::Result<usize>
     where
         W: io::Read + io::Write,
         R: io::Read,
+        F: FnMut(Progress),
     {
         let mut transmitter = Xmodem::new_with_progress(to, f);
         let mut packet = [0u8; 128];
@@ -102,10 +97,11 @@ where
     ///
     /// The function `f` is used as a callback to indicate progress throughout
     /// the reception. See the [`Progress`] enum for more information.
-    pub fn receive_with_progress<R, W>(from: R, mut into: W, f: F) -> io::Result<usize>
+    pub fn receive_with_progress<R, W, F>(from: R, mut into: W, f: F) -> io::Result<usize>
     where
         R: io::Read + io::Write,
         W: io::Write,
+        F: FnMut(Progress),
     {
         let mut receiver = Xmodem::new_with_progress(from, f);
         let mut packet = [0u8; 128];
