@@ -126,11 +126,11 @@ impl Xmodem<(), ()> {
         Ok(received)
     }
 }
-impl<T: io::Read + io::Write> Xmodem<T, ()> {
+impl<T: io::Read + io::Write> Xmodem<T, fn(Progress)> {
     /// Returns a new `Xmodem` instance with the internal reader/writer set to
     /// `inner`. The returned instance can be used for both receiving
     /// (downloading) and sending (uploading).
-    pub fn new(inner: T) -> Xmodem<T, impl FnMut(Progress)> {
+    pub fn new(inner: T) -> Xmodem<T, fn(Progress)> {
         Xmodem {
             packet: 1,
             started: false,
