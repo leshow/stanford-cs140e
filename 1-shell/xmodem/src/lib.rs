@@ -50,7 +50,7 @@ impl Xmodem<(), ()> {
     where
         W: io::Read + io::Write,
         R: io::Read,
-        F: FnMut(Progress),
+        F: Fn(Progress),
     {
         let mut transmitter = Xmodem::new_with_progress(to, f);
         let mut packet = [0u8; 128];
@@ -99,7 +99,7 @@ impl Xmodem<(), ()> {
     where
         R: io::Read + io::Write,
         W: io::Write,
-        F: FnMut(Progress),
+        F: Fn(Progress),
     {
         let mut receiver = Xmodem::new_with_progress(from, f);
         let mut packet = [0u8; 128];
@@ -129,7 +129,7 @@ impl<T> Xmodem<T, ()>
 where
     T: io::Read + io::Write,
 {
-    pub fn new(inner: T) -> Xmodem<T, impl FnMut(Progress)> {
+    pub fn new(inner: T) -> Xmodem<T, impl Fn(Progress)> {
         // Xmodem<T, fn(Progress)> works also, but since we have access to existentials lets use them
         Xmodem {
             packet: 1,
@@ -143,7 +143,7 @@ where
 impl<T, F> Xmodem<T, F>
 where
     T: io::Read + io::Write,
-    F: FnMut(Progress),
+    F: Fn(Progress),
 {
     /// Returns a new `Xmodem` instance with the internal reader/writer set to
     /// `inner`. The returned instance can be used for both receiving
