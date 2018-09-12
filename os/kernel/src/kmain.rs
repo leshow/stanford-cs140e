@@ -8,16 +8,28 @@
 #![feature(attr_literals)]
 #![feature(never_type)]
 #![feature(ptr_internals)]
+#![feature(use_nested_groups)]
 
 extern crate pi;
 extern crate stack_vec;
 
+pub mod console;
 pub mod lang_items;
 pub mod mutex;
-pub mod console;
 pub mod shell;
+
+use pi::{
+    gpio::{Gpio, Output},
+    timer,
+};
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    // FIXME: Start the shell.
+    let mut pin: Gpio<Output> = Gpio::new(16).into_output();
+    loop {
+        pin.set();
+        timer::spin_sleep_ms(1000);
+        pin.clear();
+        timer::spin_sleep_ms(1000);
+    }
 }

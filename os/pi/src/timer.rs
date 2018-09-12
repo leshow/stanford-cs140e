@@ -32,6 +32,7 @@ impl Timer {
     pub fn read(&self) -> u64 {
         let low = self.registers.CLO.read() as u64;
         let high = self.registers.CHI.read() as u64;
+        // shift the high bits (which are actually only 32-bits wide) down
         high << 32 | low
     }
 }
