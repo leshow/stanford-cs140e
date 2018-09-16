@@ -1,11 +1,11 @@
 use core::fmt;
 
 use volatile::prelude::*;
-use volatile::{Volatile, ReadVolatile, Reserved};
+use volatile::{ReadVolatile, Reserved, Volatile};
 
-use timer;
 use common::IO_BASE;
-use gpio::{Gpio, Function};
+use gpio::{Function, Gpio};
+use timer;
 
 /// The base address for the `MU` registers.
 const MU_REG_BASE: usize = IO_BASE + 0x215040;
@@ -24,6 +24,26 @@ enum LsrStatus {
 #[allow(non_snake_case)]
 struct Registers {
     // FIXME: Declare the "MU" registers from page 8.
+    IO: Volatile<u8>,
+    __r0: [Reserved<u8>; 3],
+    IER: Volatile<u8>,
+    __r1: [Reserved<u8>; 3],
+    IIR: Volatile<u8>,
+    __r2: [Reserved<u8>; 3],
+    LCR: Volatile<u8>,
+    __r3: [Reserved<u8>; 3],
+    MCR: Volatile<u8>,
+    __r4: [Reserved<u8>; 3],
+    LSR: Volatile<u8>,
+    __r5: [Reserved<u8>; 3],
+    MSR: ReadVolatile<u8>,
+    __r6: [Reserved<u8>; 3],
+    SCRATCH: Reserved<u8>,
+    __r7: [Reserved<u8>; 3],
+    CNTL: Volatile<u32>,
+    __r8: [Reserved<u8>; 3],
+    STAT: ReadVolatile<u32>,
+    BAUD: Volatile<u16>,
 }
 
 /// The Raspberry Pi's "mini UART".
@@ -47,13 +67,19 @@ impl MiniUart {
             &mut *(MU_REG_BASE as *mut Registers)
         };
 
-        // FIXME: Implement remaining mini UART initialization.
-        unimplemented!()
+        Gpio::new(14).into_alt(Function::Alt5);
+        Gpio::new(15).into_alt(Function::Alt5);
+        // baudrate = freq / 8 * (baudrate+1)
+        // 270 = freq / 8*(11520+1)
+        MiniUart {
+            registers,
+            timeout: Some(0),
+        }
     }
 
     /// Set the read timeout to `milliseconds` milliseconds.
     pub fn set_read_timeout(&mut self, milliseconds: u32) {
-        unimplemented!()
+        self.timeout = Some(milliseconds);
     }
 
     /// Write the byte `byte`. This method blocks until there is space available
@@ -92,8 +118,8 @@ impl MiniUart {
 
 #[cfg(feature = "std")]
 mod uart_io {
-    use std::io;
     use super::MiniUart;
+    use std::io;
 
     // FIXME: Implement `io::Read` and `io::Write` for `MiniUart`.
     //
