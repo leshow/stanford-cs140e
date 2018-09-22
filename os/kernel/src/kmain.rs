@@ -24,12 +24,15 @@ use pi::{
     uart::MiniUart,
 };
 
+use std::fmt::Write;
+
 #[no_mangle]
 pub extern "C" fn kmain() {
-    let uart = MiniUart::new();
+    let mut uart = MiniUart::new();
     loop {
-        uart.write_byte(uart.read_byte());
-        uart.write_str("<-")?;
+        let byte = uart.read_byte();
+        uart.write_byte(byte);
+        uart.write_str("<-");
     }
     // let mut p5: Gpio<Output> = Gpio::new(5).into_output();
     // let mut p6: Gpio<Output> = Gpio::new(6).into_output();
