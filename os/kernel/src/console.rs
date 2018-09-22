@@ -1,5 +1,5 @@
-use std::io;
 use std::fmt;
+use std::io;
 
 use pi::uart::MiniUart;
 
@@ -7,7 +7,7 @@ use mutex::Mutex;
 
 /// A global singleton allowing read/write access to the console.
 pub struct Console {
-    inner: Option<MiniUart>
+    inner: Option<MiniUart>,
 }
 
 impl Console {
@@ -19,13 +19,19 @@ impl Console {
     /// Initializes the console if it's not already initialized.
     #[inline]
     fn initialize(&mut self) {
-        unimplemented!()
+        self.inner = MiniUart::new();
     }
 
     /// Returns a mutable borrow to the inner `MiniUart`, initializing it as
     /// needed.
     fn inner(&mut self) -> &mut MiniUart {
-        unimplemented!()
+        match self.inner {
+            None => {
+                self.initialize();
+                &mut self.inner
+            }
+            Some(miniuart) => &mut miniuart,
+        }
     }
 
     /// Reads a byte from the UART device, blocking until a byte is available.

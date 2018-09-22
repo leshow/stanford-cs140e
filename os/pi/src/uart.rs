@@ -167,7 +167,7 @@ mod uart_io {
             match self.wait_for_byte() {
                 Ok(_) => {
                     let mut i = 0;
-                    while self.has_byte && i <= buf.len() {
+                    while self.has_byte() && i <= buf.len() {
                         buf[i] = self.read_byte();
                         i += 1;
                     }
@@ -185,7 +185,7 @@ mod uart_io {
             }
             Ok(buf.len())
         }
-        fn flush(&mut self) -> Result<()> {
+        fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }
     }
