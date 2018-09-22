@@ -163,12 +163,12 @@ mod uart_io {
     // The `io::Write::write()` method must write all of the requested bytes
     // before returning.
     impl io::Read for MiniUart {
-        fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
             match self.wait_for_byte() {
                 Ok(_) => {
                     let mut i = 0;
                     while self.has_byte && i <= buf.len() {
-                        buf[c] = self.read_byte();
+                        buf[i] = self.read_byte();
                         i += 1;
                     }
                     Ok(i)
@@ -179,7 +179,7 @@ mod uart_io {
     }
 
     impl io::Write for MiniUart {
-        fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
             for &b in buf {
                 self.write_byte(b);
             }
