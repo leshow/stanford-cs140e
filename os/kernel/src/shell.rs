@@ -1,5 +1,6 @@
 use console::{kprint, kprintln, CONSOLE};
 use stack_vec::StackVec;
+use std::str::from_utf8;
 
 /// Error type for `Command` parse failures.
 #[derive(Debug)]
@@ -34,13 +35,26 @@ impl<'a> Command<'a> {
         Ok(Command { args })
     }
 
+    fn execute(&self) {
+        match self.path() {
+            "echo" => echo(&self.args[1..]),
+        }
+    }
+
     /// Returns this command's path. This is equivalent to the first argument.
     fn path(&self) -> &str {
         self.args[0]
     }
 }
 
-const WELCOME: &'static str = r#"
+fn echo(args: &[&str]) {
+    for &arg in args {
+        kprint!("{} ", arg);
+    }
+}
+
+const WELCOME: &str = r#"
+Uh-oh...
                                                          c=====e
                                                             H
    ____________                                         _,,_H__
@@ -52,29 +66,55 @@ const WELCOME: &'static str = r#"
 const DEL: u8 = 127;
 const BKSP: u8 = 8;
 const BELL: u8 = 7;
+const LF: u8 = 10;
+const CR: u8 = 13;
+
 /// Starts a shell using `prefix` as the prefix for each line. This function
 /// never returns: it is perpetually in a shell loop.
 pub fn shell(prefix: &str) -> ! {
     kprintln!("{}", WELCOME);
-    let mut hist_buf = [0u8; 512];
-    let mut history = StackVec::new(&mut hist_buf);
-
     loop {
         kprint!("{}", prefix);
-        let mut cmd_buf = [0u8; 512];
-        let mut cmd = StackVec::new(&mut cmd_buf);
-        loop {
-            let byte = CONSOLE.lock().read_byte();
-            match byte {
-                b'\r' | b'\n' => {}
-                BKSP => {
-                    if cmd.pop().is_none() {
-                        CONSOLE.lock().write_byte(BELL);
-                    }
+        match readline() {
+            Err(Error::TooManyArgs) => {
+                kprintln!("Slow down cowboy, too many arguments");
+            }
+            Err(Error::Empty) => {
+                kprintln!("");
+            }
+            Ok(run) => run.execute(),
+        }
+    }
+}
+
+fn readline<'a>() -> Result<Command<'a>, Error> {
+    let console = CONSOLE.lock();
+    let mut buf = [0u8; 512];
+    let mut stack = StackVec::new(&mut buf);
+
+    loop {
+        let byte = console.read_byte();
+        match byte {
+            BKSP | DEL => {
+                if stack.pop().is_none() {
+                    console.write_byte(BELL);
+                } else {
+                    console.write_byte(BKSP);
+                    console.write_byte(b' ');
+                    console.write_byte(BKSP);
                 }
-                _ => {
-                    cmd.push(byte);
+            }
+            _ => {
+                if stack.push(byte).is_err() {
+                    console.write_byte(BELL);
+                } else {
+                    console.write_byte(byte);
                 }
+            }
+            CR | LF => {
+                let mut cmd_buf: [&str; 64] = [""; 64];
+                let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
+                return Command::parse(cmd, &mut cmd_buf);
             }
         }
     }
