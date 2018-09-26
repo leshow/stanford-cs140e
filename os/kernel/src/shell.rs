@@ -35,9 +35,10 @@ impl<'a> Command<'a> {
         Ok(Command { args })
     }
 
-    fn execute(&self) {
+    fn execute(&self) -> bool {
         match self.path() {
             "echo" => echo(&self.args[1..]),
+            _ => false,
         }
     }
 
@@ -47,10 +48,11 @@ impl<'a> Command<'a> {
     }
 }
 
-fn echo(args: &[&str]) {
+fn echo(args: &[&str]) -> bool {
     for &arg in args {
         kprint!("{} ", arg);
     }
+    true
 }
 
 const WELCOME: &str = r#"
@@ -82,7 +84,9 @@ pub fn shell(prefix: &str) -> ! {
             Err(Error::Empty) => {
                 kprintln!("");
             }
-            Ok(run) => run.execute(),
+            Ok(run) => if !run.execute() {
+                kprintln!("unknown command: {}", run.path());
+            },
         }
     }
 }
