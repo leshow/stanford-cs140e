@@ -101,17 +101,17 @@ fn readline<'a>() -> Result<Command<'a>, Error> {
                     console.write_byte(BKSP);
                 }
             }
+            CR | LF => {
+                let mut cmd_buf: [&str; 64] = [""; 64];
+                let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
+                return Command::parse(cmd, &mut cmd_buf);
+            }
             _ => {
                 if stack.push(byte).is_err() {
                     console.write_byte(BELL);
                 } else {
                     console.write_byte(byte);
                 }
-            }
-            CR | LF => {
-                let mut cmd_buf: [&str; 64] = [""; 64];
-                let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
-                return Command::parse(cmd, &mut cmd_buf);
             }
         }
     }
