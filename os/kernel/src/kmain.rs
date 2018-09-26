@@ -13,6 +13,7 @@
 extern crate pi;
 extern crate stack_vec;
 
+mod cmd;
 pub mod console;
 pub mod lang_items;
 pub mod mutex;

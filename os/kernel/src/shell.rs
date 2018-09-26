@@ -1,7 +1,7 @@
+use cmd;
 use console::{kprint, kprintln, CONSOLE};
 use stack_vec::StackVec;
 use std::str::from_utf8;
-
 /// Error type for `Command` parse failures.
 #[derive(Debug)]
 enum Error {
@@ -37,7 +37,7 @@ impl<'a> Command<'a> {
 
     fn execute(&self) -> bool {
         match self.path() {
-            "echo" => echo(&self.args[1..]),
+            "echo" => cmd::echo(&self.args[1..]),
             _ => false,
         }
     }
@@ -46,13 +46,6 @@ impl<'a> Command<'a> {
     fn path(&self) -> &str {
         self.args[0]
     }
-}
-
-fn echo(args: &[&str]) -> bool {
-    for &arg in args {
-        kprint!("{} ", arg);
-    }
-    true
 }
 
 const WELCOME: &str = r#"
