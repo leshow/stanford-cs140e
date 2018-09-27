@@ -6,7 +6,7 @@ extern crate xmodem;
 extern crate structopt_derive;
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, BufRead, BufReader},
     path::PathBuf,
     time::Duration,
@@ -99,26 +99,38 @@ fn main() -> io::Result<()> {
     serial.write_settings(&settings)?;
     serial.set_timeout(Duration::from_secs(opt.timeout))?;
 
-    let mut reader: Box<dyn BufRead> = match opt.input {
-        None => Box::new(BufReader::new(io::stdin())),
-        Some(input) => Box::new(BufReader::new(File::open(input).expect("Error with path"))),
+    let (mut reader, pb): (Box<dyn BufRead>, _) = match opt.input {
+        None => {
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(ProgressStyle::default_spinner());
+            (Box::new(BufReader::new(io::stdin())), pb)
+        }
+        Some(ref input) => (
+            Box::new(BufReader::new(
+                File::open(input).expect("Error with input path"),
+            )),
+            ProgressBar::new(fs::metadata(input)?.len()),
+        ),
     };
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(ProgressStyle::default_spinner());
 
     if opt.raw {
         let total_bytes = io::copy(&mut reader, &mut serial)?;
         println!("Wrote {} bytes", total_bytes);
     } else {
+        let mut count = 0;
         let total_bytes =
             Xmodem::transmit_with_progress(reader, serial, |progress| match progress {
                 Progress::Started => {
                     pb.set_message("Starting transmission...");
                 }
                 Progress::Waiting => {}
-                Progress::Packet(_pkt) => {
-                    pb.tick();
-                }
+                Progress::Packet(_) => match opt.input {
+                    None => pb.tick(),
+                    Some(_) => {
+                        count += 1;
+                        pb.set_position(count * 128) // each packet is 128 bytes
+                    }
+                },
             })?;
         let msg = format!(
             "Wrote {} bytes in {}",
