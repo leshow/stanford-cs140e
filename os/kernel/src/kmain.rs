@@ -22,17 +22,9 @@ pub mod shell;
 use pi::{
     gpio::{Gpio, Output},
     timer,
-    uart::MiniUart,
 };
-
-use std::fmt::Write;
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    // let mut uart = MiniUart::new();
-    // loop {
-    //     let byte = uart.read_byte();
-    //     uart.write_byte(byte);
-    //     uart.write_str("<-");
-    // }
+    shell::shell("> ");
 }
