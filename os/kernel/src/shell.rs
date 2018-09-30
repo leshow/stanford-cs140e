@@ -1,5 +1,6 @@
 use cmd;
 use console::{kprint, kprintln, CONSOLE};
+use pi::timer;
 use stack_vec::StackVec;
 use std::str::from_utf8;
 /// Error type for `Command` parse failures.
@@ -67,8 +68,8 @@ const CR: u8 = 13;
 /// Starts a shell using `prefix` as the prefix for each line. This function
 /// never returns: it is perpetually in a shell loop.
 pub fn shell(prefix: &str) -> ! {
-    kprintln!("{}", WELCOME);
     loop {
+        kprintln!("{}", WELCOME);
         kprint!("{}", prefix);
         let mut buf = [0u8; 512];
         let mut console = CONSOLE.lock();

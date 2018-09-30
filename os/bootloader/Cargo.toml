@@ -9,17 +9,17 @@ path = "src/kmain.rs"
 
 [profile.dev]
 panic = "abort"
-#lto = true
+lto = true
 debug = true
 
 [profile.test]
 panic = "abort"
-#lto = true
+lto = true
 debug = true
 
 [profile.release]
 panic = "abort"
-#lto = true
+lto = true
 
 [dependencies]
 pi = { path = "../pi", features = ["std"] }

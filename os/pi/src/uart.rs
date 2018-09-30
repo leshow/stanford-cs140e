@@ -110,21 +110,23 @@ impl MiniUart {
     /// returns `Ok(())`, a subsequent call to `read_byte` is guaranteed to
     /// return immediately.
     pub fn wait_for_byte(&self) -> Result<(), ()> {
-        if let Some(t) = self.timeout {
-            let time = timer::Timer::new();
-            let start = time.read();
-            let end = start + (t as u64) * 1000;
+        match self.timeout {
+            Some(t) => {
+                let start = timer::current_time();
+                let end = start + (t as u64) * 1000;
 
-            while time.read() <= end {
-                if self.has_byte() {
-                    return Ok(());
+                while timer::current_time() <= end {
+                    if self.has_byte() {
+                        return Ok(());
+                    }
                 }
+                Err(())
             }
-            return Err(());
-        } else {
-            while !self.has_byte() {}
+            None => {
+                while !self.has_byte() {}
+                Ok(())
+            }
         }
-        Ok(())
     }
 
     /// Reads a byte. Blocks indefinitely until a byte is ready to be read.
