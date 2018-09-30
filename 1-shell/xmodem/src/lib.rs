@@ -1,4 +1,4 @@
-use std::io;
+#![feature(conservative_impl_trait)]
 
 mod progress;
 mod read_ext;
@@ -8,6 +8,7 @@ mod tests;
 pub use progress::{Progress, ProgressFn};
 
 use read_ext::ReadExt;
+use std::io;
 
 const SOH: u8 = 0x01;
 const EOT: u8 = 0x04;
@@ -346,7 +347,7 @@ where
     ///
     /// An error of kind `Interrupted` is returned if a packet checksum fails.
     pub fn write_packet(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if buf.len() < 128 && buf.len() != 0 {
+        if buf.len() < 128 && buf.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "buffer length is less than 128",
@@ -363,14 +364,14 @@ where
             self.write_byte(EOT)?;
             self.expect_byte(ACK, "Expected ACK to end tranmsission")?;
             self.started = false;
-            return Ok(0);
+            Ok(0)
         } else {
             self.write_byte(SOH)?;
             let packet = self.packet;
             self.write_byte(packet)?;
             self.write_byte(!packet)?;
 
-            self.inner.write(buf)?;
+            self.inner.write_all(buf)?;
             let checksum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
             self.write_byte(checksum)?;
 

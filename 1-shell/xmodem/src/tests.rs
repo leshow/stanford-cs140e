@@ -172,7 +172,6 @@ fn test_raw_transmission() {
     let mut input = [0u8; 256];
     let mut output = [0u8; 256];
     (0..256usize)
-        .into_iter()
         .enumerate()
         .for_each(|(i, b)| input[i] = b as u8);
 
