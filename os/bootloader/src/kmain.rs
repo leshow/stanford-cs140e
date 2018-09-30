@@ -31,7 +31,7 @@ fn jump_to(addr: *mut u8) -> ! {
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(BINARY_START, MAX_BINARY_SIZE) };
+    let mut buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(BINARY_START, MAX_BINARY_SIZE) };
     let mut uart = MiniUart::new();
     uart.set_read_timeout(750);
 

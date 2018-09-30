@@ -70,47 +70,45 @@ pub fn shell(prefix: &str) -> ! {
     kprintln!("{}", WELCOME);
     loop {
         kprint!("{}", prefix);
-        match readline() {
-            Err(Error::TooManyArgs) => {
-                kprintln!("Slow down cowboy, too many arguments");
-            }
-            Err(Error::Empty) => {
-                kprintln!("");
-            }
-            Ok(run) => if !run.execute() {
-                kprintln!("unknown command: {}", run.path());
-            },
-        }
-    }
-}
+        let mut buf = [0u8; 512];
+        let mut console = CONSOLE.lock();
+        let mut stack = StackVec::new(&mut buf);
 
-fn readline<'a>() -> Result<Command<'a>, Error> {
-    let console = CONSOLE.lock();
-    let mut buf = [0u8; 512];
-    let mut stack = StackVec::new(&mut buf);
-
-    loop {
-        let byte = console.read_byte();
-        match byte {
-            BKSP | DEL => {
-                if stack.pop().is_none() {
-                    console.write_byte(BELL);
-                } else {
-                    console.write_byte(BKSP);
-                    console.write_byte(b' ');
-                    console.write_byte(BKSP);
+        loop {
+            let byte = console.read_byte();
+            match byte {
+                BKSP | DEL => {
+                    if stack.pop().is_none() {
+                        console.write_byte(BELL);
+                    } else {
+                        console.write_byte(BKSP);
+                        console.write_byte(b' ');
+                        console.write_byte(BKSP);
+                    }
                 }
-            }
-            CR | LF => {
-                let mut cmd_buf: [&str; 64] = [""; 64];
-                let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
-                return Command::parse(cmd, &mut cmd_buf);
-            }
-            _ => {
-                if stack.push(byte).is_err() {
-                    console.write_byte(BELL);
-                } else {
-                    console.write_byte(byte);
+                CR | LF => {
+                    let mut cmd_buf: [&str; 64] = [""; 64];
+                    let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
+                    match Command::parse(cmd, &mut cmd_buf) {
+                        Err(Error::TooManyArgs) => {
+                            kprintln!("Slow down cowboy, too many arguments");
+                        }
+                        Err(Error::Empty) => {
+                            kprintln!("");
+                        }
+                        Ok(run) => {
+                            if !run.execute() {
+                                kprintln!("unknown command: {}", run.path());
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    if stack.push(byte).is_err() {
+                        console.write_byte(BELL);
+                    } else {
+                        console.write_byte(byte);
+                    }
                 }
             }
         }
