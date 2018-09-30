@@ -1,0 +1,1 @@
+new is unsafe because the caller must gaurantee the ptr points to a valid T and a 'static lifetime, but none of these invariants are enforced. read/write use unsafe blocks, but are marked safe because the invariant should already be enforced.

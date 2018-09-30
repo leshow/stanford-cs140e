@@ -1,1 +1,0 @@
-For UniqueVolatile the caller has to guarantee the underlying ptr is 'static and must be the only mutable reference to the value.
