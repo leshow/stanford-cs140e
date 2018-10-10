@@ -54,7 +54,7 @@ impl io::Write for Console {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        Ok(())
+        self.inner().flush()
     }
 }
 

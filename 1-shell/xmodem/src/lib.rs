@@ -347,7 +347,7 @@ where
     ///
     /// An error of kind `Interrupted` is returned if a packet checksum fails.
     pub fn write_packet(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if buf.len() < 128 && buf.is_empty() {
+        if buf.len() != 128 && !buf.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "buffer length is less than 128",

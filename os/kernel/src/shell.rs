@@ -68,17 +68,17 @@ const CR: u8 = 13;
 /// Starts a shell using `prefix` as the prefix for each line. This function
 /// never returns: it is perpetually in a shell loop.
 pub fn shell(prefix: &str) -> ! {
+    kprintln!("{}", WELCOME);
     loop {
-        kprintln!("{}", WELCOME);
-        kprint!("{}", prefix);
         let mut buf = [0u8; 512];
-        let mut console = CONSOLE.lock();
         let mut stack = StackVec::new(&mut buf);
+        kprint!("{}", prefix);
 
         loop {
-            let byte = console.read_byte();
+            let byte = CONSOLE.lock().read_byte();
             match byte {
                 BKSP | DEL => {
+                    let mut console = CONSOLE.lock();
                     if stack.pop().is_none() {
                         console.write_byte(BELL);
                     } else {
@@ -100,11 +100,15 @@ pub fn shell(prefix: &str) -> ! {
                         Ok(run) => {
                             if !run.execute() {
                                 kprintln!("unknown command: {}", run.path());
+                            } else {
+                                kprintln!("");
                             }
                         }
                     }
+                    break;
                 }
                 _ => {
+                    let mut console = CONSOLE.lock();
                     if stack.push(byte).is_err() {
                         console.write_byte(BELL);
                     } else {

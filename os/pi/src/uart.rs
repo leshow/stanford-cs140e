@@ -40,7 +40,7 @@ struct Registers {
     __r6: [Reserved<u8>; 3],
     SCRATCH: Reserved<u8>,
     __r7: [Reserved<u8>; 3],
-    CNTL: Volatile<u32>,
+    CNTL: Volatile<u8>,
     __r8: [Reserved<u8>; 3],
     STAT: ReadVolatile<u32>,
     BAUD: Volatile<u16>,
