@@ -262,7 +262,7 @@ where
     ///
     /// An error of kind `UnexpectedEof` is returned if `buf.len() < 128`.
     pub fn read_packet(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if buf.len() < 128 {
+        if buf.len() != 128 {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "buffer length is less than 128",
@@ -283,14 +283,11 @@ where
             }
             SOH => {
                 let packet = self.packet;
-                let pack_num = self.expect_byte_or_cancel(packet, "Packet number doesn't match")?;
-                let ones_pack_num = self.expect_byte_or_cancel(
-                    !pack_num,
-                    "Ones complement packet number doesn't match",
-                )?;
-                if ones_pack_num + pack_num != 255 {
-                    self.write_byte(CAN)?;
-                }
+                self.expect_byte_or_cancel(packet, "Packet number doesn't match")?;
+                self.expect_byte_or_cancel(!packet, "Ones complement packet number doesn't match")?;
+                // if ones_pack_num + pack_num != 255 {
+                // self.write_byte(CAN)?;
+                // }
                 self.inner.read_exact(buf)?;
                 let sum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
                 let checksum = self.read_byte(false)?;
@@ -305,7 +302,7 @@ where
                 } else {
                     self.write_byte(ACK)?;
                     self.packet = self.packet.wrapping_add(1);
-                    (self.progress)(Progress::Packet(pack_num));
+                    (self.progress)(Progress::Packet(packet));
                     Ok(128)
                 }
             }
@@ -347,7 +344,7 @@ where
     ///
     /// An error of kind `Interrupted` is returned if a packet checksum fails.
     pub fn write_packet(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if buf.len() != 128 && !buf.is_empty() {
+        if buf.len() < 128 && !buf.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "buffer length is less than 128",
@@ -357,6 +354,7 @@ where
             (self.progress)(Progress::Waiting);
             self.expect_byte(NAK, "Expected NAK to start transmission")?;
             self.started = true;
+            (self.progress)(Progress::Started);
         }
         if buf.is_empty() {
             self.write_byte(EOT)?;

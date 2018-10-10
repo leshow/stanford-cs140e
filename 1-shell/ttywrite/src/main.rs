@@ -112,6 +112,7 @@ fn main() -> io::Result<()> {
             ProgressBar::new(fs::metadata(input)?.len()),
         ),
     };
+    println!("Starting");
 
     if opt.raw {
         let total_bytes = io::copy(&mut reader, &mut serial)?;
@@ -123,7 +124,9 @@ fn main() -> io::Result<()> {
                 Progress::Started => {
                     pb.set_message("Starting transmission...");
                 }
-                Progress::Waiting => {}
+                Progress::Waiting => {
+                    pb.set_message("waiting");
+                }
                 Progress::Packet(_) => match opt.input {
                     None => pb.tick(),
                     Some(_) => {
