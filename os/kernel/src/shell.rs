@@ -51,12 +51,12 @@ impl<'a> Command<'a> {
 
 const WELCOME: &str = r#"
 Uh-oh...
-                                                         c=====e
-                                                            H
-   ____________                                         _,,_H__
-  (__((__((___()                                       //|     |
- (__((__((___()()_____________________________________// |ACME |
-(__((__((___()()()------------------------------------'  |_____|
+                                       c=====e
+                                          H
+   ____________                       _,,_H__
+  (__((__((___()                     //|     |
+ (__((__((___()()___________________// |ACME |
+(__((__((___()()()------------------'  |_____|
 "#;
 
 const DEL: u8 = 127;
@@ -68,10 +68,13 @@ const CR: u8 = 13;
 /// Starts a shell using `prefix` as the prefix for each line. This function
 /// never returns: it is perpetually in a shell loop.
 pub fn shell(prefix: &str) -> ! {
+    timer::spin_sleep_ms(250);
     kprintln!("{}", WELCOME);
+
     loop {
         let mut buf = [0u8; 512];
         let mut stack = StackVec::new(&mut buf);
+        let cursor = 0;
         kprint!("{}", prefix);
 
         loop {
@@ -90,6 +93,7 @@ pub fn shell(prefix: &str) -> ! {
                 CR | LF => {
                     let mut cmd_buf: [&str; 64] = [""; 64];
                     let cmd = from_utf8(stack.as_slice()).unwrap_or_default();
+                    kprintln!("");
                     match Command::parse(cmd, &mut cmd_buf) {
                         Err(Error::TooManyArgs) => {
                             kprintln!("Slow down cowboy, too many arguments");
