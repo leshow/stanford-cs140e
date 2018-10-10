@@ -111,20 +111,19 @@ impl MiniUart {
     /// return immediately.
     pub fn wait_for_byte(&self) -> Result<(), ()> {
         match self.timeout {
-            Some(t) => {
+            None => {
+                while !self.has_byte() {}
+                Ok(())
+            }
+            Some(time) => {
                 let start = timer::current_time();
-                let end = start + (t as u64) * 1000;
-
+                let end = start + (time as u64) * 1000; // Internal clock unit is microsecond, but timeout unit is millisecond
                 while timer::current_time() <= end {
                     if self.has_byte() {
                         return Ok(());
                     }
                 }
                 Err(())
-            }
-            None => {
-                while !self.has_byte() {}
-                Ok(())
             }
         }
     }
@@ -169,7 +168,7 @@ mod uart_io {
             match self.wait_for_byte() {
                 Ok(_) => {
                     let mut i = 0;
-                    while self.has_byte() && i <= buf.len() {
+                    while self.has_byte() && i < buf.len() {
                         buf[i] = self.read_byte();
                         i += 1;
                     }

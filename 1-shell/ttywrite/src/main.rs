@@ -7,7 +7,7 @@ extern crate structopt_derive;
 
 use std::{
     fs::{self, File},
-    io::{self, BufRead, BufReader},
+    io::{self, BufRead, BufReader, Write},
     path::PathBuf,
     time::Duration,
     time::Instant,
@@ -127,13 +127,16 @@ fn main() -> io::Result<()> {
                 Progress::Waiting => {
                     pb.set_message("waiting");
                 }
-                Progress::Packet(_) => match opt.input {
-                    None => pb.tick(),
-                    Some(_) => {
-                        count += 1;
-                        pb.set_position(count * 128) // each packet is 128 bytes
+                Progress::Packet(_) => {
+                    io::stdout().flush().unwrap();
+                    match opt.input {
+                        None => pb.tick(),
+                        Some(_) => {
+                            count += 1;
+                            pb.set_position(count * 128) // each packet is 128 bytes
+                        }
                     }
-                },
+                }
             })?;
         let msg = format!(
             "Wrote {} bytes in {}",

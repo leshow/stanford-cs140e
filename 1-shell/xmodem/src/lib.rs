@@ -285,9 +285,6 @@ where
                 let packet = self.packet;
                 self.expect_byte_or_cancel(packet, "Packet number doesn't match")?;
                 self.expect_byte_or_cancel(!packet, "Ones complement packet number doesn't match")?;
-                // if ones_pack_num + pack_num != 255 {
-                // self.write_byte(CAN)?;
-                // }
                 self.inner.read_exact(buf)?;
                 let sum = buf.iter().fold(0, |acc: u8, a| acc.wrapping_add(*a));
                 let checksum = self.read_byte(false)?;
@@ -354,7 +351,6 @@ where
             (self.progress)(Progress::Waiting);
             self.expect_byte(NAK, "Expected NAK to start transmission")?;
             self.started = true;
-            (self.progress)(Progress::Started);
         }
         if buf.is_empty() {
             self.write_byte(EOT)?;
