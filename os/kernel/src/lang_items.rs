@@ -7,8 +7,25 @@ pub extern "C" fn panic_fmt(
     line: u32,
     col: u32,
 ) -> ! {
-    // FIXME: Print `fmt`, `file`, and `line` to the console.
+    static PANIC: &'static str = r#"
+             (   )
+          (   ) (
+           ) _   )
+            ( \_
+          _(_\ \)__
+         (____\___))  
 
+       You fucked up.
+
+---------- PANIC ----------
+"#;
+    use console::{kprint, kprintln};
+    kprint!("{}", PANIC);
+    kprintln!("file: {}", file);
+    kprintln!("line: {}", line);
+    kprintln!("col: {}\n", col);
+
+    kprint!("{}", fmt);
     loop {
         unsafe { asm!("wfe") }
     }
