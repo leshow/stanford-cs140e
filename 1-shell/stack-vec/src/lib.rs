@@ -55,9 +55,11 @@ impl<'a, T: 'a> StackVec<'a, T> {
         assert!(index < len);
         unsafe {
             let ret;
-            let ptr = self.storage.as_mut_ptr().add(index);
-            ret = core::ptr::read(ptr);
-            core::ptr::copy(ptr.offset(1), ptr, len - index - 1);
+            {
+                let ptr = self.storage.as_mut_ptr().add(index);
+                ret = core::ptr::read(ptr);
+                core::ptr::copy(ptr.offset(1), ptr, len - index - 1);
+            }
             self.len -= 1;
             ret
         }

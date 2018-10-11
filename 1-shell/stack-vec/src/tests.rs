@@ -16,6 +16,19 @@ fn assignment_text_example() {
     let last_element = vec.pop().expect("has elements");
     assert_eq!(last_element, 9 * 9);
 }
+#[test]
+fn test_remove() {
+    let mut buf = [0usize; 15];
+    let mut vec = StackVec::new(&mut buf);
+    for i in 0..15 {
+        vec.push(i).unwrap();
+    }
+    assert_eq!(&vec[10..], &[10, 11, 12, 13, 14]);
+    vec.remove(10);
+    assert_eq!(vec.len(), 14);
+    assert_eq!(vec[10], 11);
+    assert_eq!(&vec[10..], &[11, 12, 13, 14]);
+}
 
 #[test]
 fn len_and_capacity_ok() {
@@ -119,7 +132,7 @@ fn pop() {
         assert_eq!(stack_vec.len(), i + 1);
     }
 
-    for i in 1023..=0 {
+    for i in (0..=1023).rev() {
         assert_eq!(stack_vec.len(), i + 1);
         assert_eq!(stack_vec.pop(), Some(i));
         assert_eq!(stack_vec.len(), i);
