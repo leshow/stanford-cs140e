@@ -1,4 +1,5 @@
 #![cfg_attr(test, feature(inclusive_range_syntax))]
+#![feature(pointer_methods)]
 #![no_std]
 
 #[cfg(test)]
@@ -46,6 +47,20 @@ impl<'a, T: 'a> StackVec<'a, T> {
     /// Returns the number of elements this vector can hold.
     pub fn capacity(&self) -> usize {
         self.storage.len()
+    }
+
+    /// Removes element at index, shifting all remaining elements to the left
+    pub fn remove(&mut self, index: usize) -> T {
+        let len = self.len();
+        assert!(index < len);
+        unsafe {
+            let ret;
+            let ptr = self.storage.as_mut_ptr().add(index);
+            ret = core::ptr::read(ptr);
+            core::ptr::copy(ptr.offset(1), ptr, len - index - 1);
+            self.len -= 1;
+            ret
+        }
     }
 
     /// Shortens the vector, keeping the first `len` elements. If `len` is

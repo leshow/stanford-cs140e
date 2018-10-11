@@ -1,8 +1,11 @@
-use cmd;
-use console::{kprint, kprintln, CONSOLE};
-use pi::timer;
-use stack_vec::StackVec;
-use std::str::from_utf8;
+use std::{io::Write, str::from_utf8};
+use {
+    cmd,
+    console::{kprint, kprintln, CONSOLE},
+    pi::timer,
+    stack_vec::StackVec,
+};
+
 /// Error type for `Command` parse failures.
 #[derive(Debug)]
 enum Error {
@@ -64,6 +67,11 @@ const BKSP: u8 = 8;
 const BELL: u8 = 7;
 const LF: u8 = 10;
 const CR: u8 = 13;
+const LEFT: u8 = b'D';
+const RIGHT: u8 = b'C';
+const UP: u8 = b'A';
+const DOWN: u8 = b'B';
+const ESC: u8 = 0x1b;
 
 /// Starts a shell using `prefix` as the prefix for each line. This function
 /// never returns: it is perpetually in a shell loop.
@@ -74,9 +82,7 @@ pub fn shell(prefix: &str) -> ! {
     loop {
         let mut buf = [0u8; 512];
         let mut stack = StackVec::new(&mut buf);
-        let cursor = 0;
         kprint!("{}", prefix);
-
         loop {
             let byte = CONSOLE.lock().read_byte();
             match byte {
@@ -98,9 +104,7 @@ pub fn shell(prefix: &str) -> ! {
                         Err(Error::TooManyArgs) => {
                             kprintln!("Slow down cowboy, too many arguments");
                         }
-                        Err(Error::Empty) => {
-                            kprintln!("");
-                        }
+                        Err(Error::Empty) => {}
                         Ok(run) => {
                             if !run.execute() {
                                 kprintln!("unknown command: {}", run.path());
