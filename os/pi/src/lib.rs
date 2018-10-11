@@ -14,7 +14,6 @@ extern crate volatile;
 
 pub mod atags;
 pub mod common;
-pub mod common;
 pub mod gpio;
 pub mod timer;
 pub mod uart;
