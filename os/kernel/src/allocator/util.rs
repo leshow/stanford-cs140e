@@ -6,7 +6,10 @@
 ///
 /// Panics if `align` is not a power of 2.
 pub fn align_down(addr: usize, align: usize) -> usize {
-    unimplemented!()
+    if align & (align - 1) != 0 {
+        panic!("memory not aligned")
+    }
+    addr / align * align
 }
 
 /// Align `addr` upwards to the nearest multiple of `align`.
@@ -17,5 +20,5 @@ pub fn align_down(addr: usize, align: usize) -> usize {
 ///
 /// Panics if `align` is not a power of 2.
 pub fn align_up(addr: usize, align: usize) -> usize {
-    unimplemented!()
+    align_down(addr.saturating_add(align - 1), align)
 }

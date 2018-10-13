@@ -1,5 +1,5 @@
 use std::{io::Write, str::from_utf8};
-use {cmd, console::{kprint, kprintln, CONSOLE}, pi::{timer, atags::Atags}, stack_vec::StackVec};
+use {cmd, console::{kprint, kprintln, CONSOLE}, pi::timer, stack_vec::StackVec};
 
 /// Error type for `Command` parse failures.
 #[derive(Debug)]

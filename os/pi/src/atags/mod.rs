@@ -25,8 +25,8 @@ impl Iterator for Atags {
 
     fn next(&mut self) -> Option<Atag> {
         let cur = self.ptr;
-        self.ptr.next().map(|atag| {
-            self.ptr = atag;
+        self.ptr.next().map(|next_tag| {
+            self.ptr = next_tag;
             cur.into()
         })
     }
