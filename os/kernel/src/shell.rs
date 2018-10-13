@@ -1,10 +1,5 @@
 use std::{io::Write, str::from_utf8};
-use {
-    cmd,
-    console::{kprint, kprintln, CONSOLE},
-    pi::timer,
-    stack_vec::StackVec,
-};
+use {cmd, console::{kprint, kprintln, CONSOLE}, pi::{timer, atags::Atags}, stack_vec::StackVec};
 
 /// Error type for `Command` parse failures.
 #[derive(Debug)]
@@ -78,7 +73,6 @@ const ESC: u8 = 0x1b;
 pub fn shell(prefix: &str) -> ! {
     timer::spin_sleep_ms(250);
     kprintln!("{}", WELCOME);
-
     loop {
         let mut buf = [0u8; 512];
         let mut stack = StackVec::new(&mut buf);

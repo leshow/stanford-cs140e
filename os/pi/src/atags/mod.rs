@@ -15,7 +15,7 @@ impl Atags {
     /// Returns an instance of `Atags`, an iterator over ATAGS on this system.
     pub fn get() -> Atags {
         Atags {
-            ptr: unsafe { &*(ATAG_BASE as *const raw::Atag) }
+            ptr: unsafe { &*(ATAG_BASE as *const raw::Atag) },
         }
     }
 }
@@ -24,6 +24,10 @@ impl Iterator for Atags {
     type Item = Atag;
 
     fn next(&mut self) -> Option<Atag> {
-        unimplemented!("atags iterator")
+        let cur = self.ptr;
+        self.ptr.next().map(|atag| {
+            self.ptr = atag;
+            cur.into()
+        })
     }
 }

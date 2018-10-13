@@ -8,6 +8,7 @@
 #![feature(attr_literals)]
 #![feature(use_nested_groups)]
 #![feature(exclusive_range_pattern)]
+#![feature(raw_vec_internals)]
 #![feature(alloc, allocator_api, global_allocator)]
 
 #[macro_use]
@@ -39,5 +40,6 @@ pub static FILE_SYSTEM: FileSystem = FileSystem::uninitialized();
 #[cfg(not(test))]
 pub extern "C" fn kmain() {
     // ALLOCATOR.initialize();
+
     shell::shell("> ");
 }
