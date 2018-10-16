@@ -1,14 +1,13 @@
-use std::fmt;
-use std::mem;
 use alloc::heap::{AllocErr, Layout};
+use std::{cmp, fmt, mem};
 
-use allocator::util::*;
 use allocator::linked_list::LinkedList;
+use allocator::util::*;
 
 const MIN_POW: usize = 3;
 const MIN_SIZE: usize = 1 << MIN_POW;
 const USIZE_SIZE: usize = mem::size_of::<usize>();
-const MAX_CLASS: usize = 32;
+const MAX_BINS: usize = 32;
 
 /// A simple allocator that allocates based on size classes.
 pub struct Allocator {
@@ -20,7 +19,7 @@ impl Allocator {
     /// Creates a new bin allocator that will allocate memory from the region
     /// starting at address `start` and ending at address `end`.
     pub fn new(start: usize, end: usize) -> Allocator {
-        let max_size = bin_size(end - start);
+        let max_size = Allocator::bin_size(end - start);
         Allocator {
             bins: [LinkedList::new(); MAX_BINS],
             total_alloc: 0,
@@ -32,7 +31,7 @@ impl Allocator {
         if size < MIN_SIZE {
             0
         } else {
-            (bin_size(size).trailing_zeros() - MIN_POW) as usize
+            (Allocator::bin_size(size).trailing_zeros() - MIN_POW) as usize
         }
     }
 
@@ -65,7 +64,22 @@ impl Allocator {
     /// (`AllocError::Exhausted`) or `layout` does not meet this allocator's
     /// size or alignment constraints (`AllocError::Unsupported`).
     pub fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
-        unimplemented!("bin allocation")
+        let cur = align_up(self.total_alloc, cmp::max(layout.align(), USIZE_SIZE));
+        let size = Allocator::bin_size(layout.size());
+        let num = Allocator::bin_num(size);
+
+        if size > self.max_size {
+            return Err(AllocErr::Exhausted { request: layout });
+        }
+        for &bin in &self.bins[num..] {
+            if bin.is_empty() {
+                unsafe {
+                    bin.push(cur as *mut usize);
+                }
+            } else {
+                // for node in (n)
+            }
+        }
     }
 
     /// Deallocates the memory referenced by `ptr`.
