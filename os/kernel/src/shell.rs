@@ -73,6 +73,11 @@ const ESC: u8 = 0x1b;
 pub fn shell(prefix: &str) -> ! {
     timer::spin_sleep_ms(250);
     kprintln!("{}", WELCOME);
+    let mut v: Vec<u8> = vec![];
+    for i in 0..100 {
+        v.push(i);
+    }
+    kprintln!("{:?}", v);
     loop {
         let mut buf = [0u8; 512];
         let mut stack = StackVec::new(&mut buf);

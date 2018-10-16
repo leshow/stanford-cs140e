@@ -1,21 +1,49 @@
 use std::fmt;
+use std::mem;
 use alloc::heap::{AllocErr, Layout};
 
 use allocator::util::*;
 use allocator::linked_list::LinkedList;
 
+const MIN_POW: usize = 3;
+const MIN_SIZE: usize = 1 << MIN_POW;
+const USIZE_SIZE: usize = mem::size_of::<usize>();
+const MAX_CLASS: usize = 32;
+
 /// A simple allocator that allocates based on size classes.
 pub struct Allocator {
-    // FIXME: Add the necessary fields.
+    bins: [LinkedList; MAX_BINS],
+    total_alloc: usize,
 }
 
 impl Allocator {
     /// Creates a new bin allocator that will allocate memory from the region
     /// starting at address `start` and ending at address `end`.
     pub fn new(start: usize, end: usize) -> Allocator {
-        unimplemented!("bin allocator")
+        let max_size = bin_size(end - start);
+        Allocator {
+            bins: [LinkedList::new(); MAX_BINS],
+            total_alloc: 0,
+            max_size,
+        }
+    }
+    /// Determines bin number based on its size
+    fn bin_num(size: usize) -> usize {
+        if size < MIN_SIZE {
+            0
+        } else {
+            (bin_size(size).trailing_zeros() - MIN_POW) as usize
+        }
     }
 
+    /// Determines size of bin based on the actual size
+    fn bin_size(actual: usize) -> usize {
+        if actual < MIN_SIZE {
+            MIN_SIZE
+        } else {
+            actual.next_power_of_two()
+        }
+    }
     /// Allocates memory. Returns a pointer meeting the size and alignment
     /// properties of `layout.size()` and `layout.align()`.
     ///

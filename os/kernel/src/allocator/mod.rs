@@ -97,10 +97,13 @@ extern "C" {
 /// This function is expected to return `Some` under all normal cirumstances.
 fn memory_map() -> Option<(usize, usize)> {
     let binary_end = unsafe { (&_end as *const u8) as u32 };
-    // TODO: what do I do with binary_end?
+
     for atag in Atags::get() {
         if let Some(mem) = atag.mem() {
-            return Some((mem.start as usize, (mem.start + mem.size) as usize));
+            return Some((
+                ::std::cmp::max(mem.start, binary_end) as usize,
+                (mem.start + mem.size) as usize,
+            ));
         }
     }
     None

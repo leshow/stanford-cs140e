@@ -36,6 +36,9 @@ pub static ALLOCATOR: Allocator = Allocator::uninitialized();
 
 pub static FILE_SYSTEM: FileSystem = FileSystem::uninitialized();
 
+#[cfg(not(test))]
+use console::kprintln;
+
 #[no_mangle]
 #[cfg(not(test))]
 pub extern "C" fn kmain() {
