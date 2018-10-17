@@ -4,7 +4,7 @@ use std::{cmp, fmt, mem};
 use allocator::linked_list::LinkedList;
 use allocator::util::*;
 
-const MIN_POW: usize = 3;
+const MIN_POW: u32 = 3;
 const MIN_SIZE: usize = 1 << MIN_POW;
 const USIZE_SIZE: usize = mem::size_of::<usize>();
 const MAX_BINS: usize = 32;
@@ -13,6 +13,7 @@ const MAX_BINS: usize = 32;
 pub struct Allocator {
     bins: [LinkedList; MAX_BINS],
     total_alloc: usize,
+    max_size: usize,
 }
 
 impl Allocator {
@@ -71,15 +72,14 @@ impl Allocator {
         if size > self.max_size {
             return Err(AllocErr::Exhausted { request: layout });
         }
-        for &bin in &self.bins[num..] {
-            if bin.is_empty() {
-                unsafe {
-                    bin.push(cur as *mut usize);
-                }
-            } else {
-                // for node in (n)
+        for ref mut bin in &mut self.bins[num..] {
+            if !bin.is_empty() {
+                let node = bin.pop().expect("Pop free node");
+                self.total_alloc += size;
+                return Ok(node as *mut u8);
             }
         }
+        unimplemented!();
     }
 
     /// Deallocates the memory referenced by `ptr`.
@@ -96,7 +96,11 @@ impl Allocator {
     /// Parameters not meeting these conditions may result in undefined
     /// behavior.
     pub fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
-        unimplemented!("bin deallocation")
+        let size = cmp::max(layout.size(), layout.align());
+        let num = Allocator::bin_num(size);
+        unsafe {
+            self.bins[num].push(ptr as *mut usize);
+        }
     }
 }
 //
