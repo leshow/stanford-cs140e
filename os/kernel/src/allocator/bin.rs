@@ -13,6 +13,7 @@ const MAX_BINS: usize = 32;
 pub struct Allocator {
     bins: [LinkedList; MAX_BINS],
     total_alloc: usize,
+    end: usize,
     max_size: usize,
 }
 
@@ -23,7 +24,8 @@ impl Allocator {
         let max_size = Allocator::bin_size(end - start);
         Allocator {
             bins: [LinkedList::new(); MAX_BINS],
-            total_alloc: 0,
+            total_alloc: start,
+            end,
             max_size,
         }
     }
@@ -65,8 +67,8 @@ impl Allocator {
     /// (`AllocError::Exhausted`) or `layout` does not meet this allocator's
     /// size or alignment constraints (`AllocError::Unsupported`).
     pub fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
-        let cur = align_up(self.total_alloc, cmp::max(layout.align(), USIZE_SIZE));
-        let size = Allocator::bin_size(layout.size());
+        let size = cmp::max(layout.align(), layout.size());
+        let bin_size = Allocator::bin_size(size);
         let num = Allocator::bin_num(size);
 
         if size > self.max_size {
@@ -79,7 +81,12 @@ impl Allocator {
                 return Ok(node as *mut u8);
             }
         }
-        unimplemented!();
+        let cur = align_up(self.total_alloc, layout.align());
+        if cur > self.end {
+            return Err(AllocErr::Exhausted { request: layout });
+        }
+        self.total_alloc = cur + bin_size;
+        Ok(self.total_alloc as *mut u8)
     }
 
     /// Deallocates the memory referenced by `ptr`.
@@ -98,9 +105,11 @@ impl Allocator {
     pub fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
         let size = cmp::max(layout.size(), layout.align());
         let num = Allocator::bin_num(size);
+        let bin_size = Allocator::bin_size(size);
         unsafe {
             self.bins[num].push(ptr as *mut usize);
         }
+        self.total_alloc -= bin_size;
     }
 }
 //
