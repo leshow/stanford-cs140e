@@ -28,6 +28,7 @@ impl Allocator {
             start,
             end,
             max_size,
+            internal_frag: 0,
             external_frag: 0,
         }
     }

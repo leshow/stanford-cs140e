@@ -1,16 +1,16 @@
 mod linked_list;
 mod util;
 
-#[path = "bump.rs"]
+#[path = "bin.rs"]
 mod imp;
 
 #[cfg(test)]
 mod tests;
 
-use mutex::Mutex;
 use alloc::heap::{Alloc, AllocErr, Layout};
-use std::cmp::max;
+use mutex::Mutex;
 use pi::atags::Atags;
+use std::cmp::max;
 
 /// Thread-safe (locking) wrapper around a particular memory allocator.
 #[derive(Debug)]
