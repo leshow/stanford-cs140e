@@ -12,9 +12,10 @@ const MAX_BINS: usize = 32;
 /// A simple allocator that allocates based on size classes.
 pub struct Allocator {
     bins: [LinkedList; MAX_BINS],
-    total_alloc: usize,
+    start: usize,
     end: usize,
     max_size: usize,
+    external_frag: usize,
 }
 
 impl Allocator {
@@ -24,9 +25,10 @@ impl Allocator {
         let max_size = Allocator::bin_size(end - start);
         Allocator {
             bins: [LinkedList::new(); MAX_BINS],
-            total_alloc: start,
+            start,
             end,
             max_size,
+            external_frag: 0,
         }
     }
     /// Determines bin number based on its size
@@ -68,8 +70,8 @@ impl Allocator {
     /// size or alignment constraints (`AllocError::Unsupported`).
     pub fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
         let size = cmp::max(layout.align(), layout.size());
-        let bin_size = Allocator::bin_size(size);
         let num = Allocator::bin_num(size);
+        let bin_size = Allocator::bin_size(size);
 
         if size > self.max_size {
             return Err(AllocErr::Exhausted { request: layout });
@@ -77,16 +79,18 @@ impl Allocator {
         for ref mut bin in &mut self.bins[num..] {
             if !bin.is_empty() {
                 let node = bin.pop().expect("Pop free node");
-                self.total_alloc += size;
+                self.start += bin_size;
+                self.external_frag += bin_size - size;
                 return Ok(node as *mut u8);
             }
         }
-        let cur = align_up(self.total_alloc, layout.align());
+        let cur = align_up(self.start, layout.align());
         if cur > self.end {
             return Err(AllocErr::Exhausted { request: layout });
         }
-        self.total_alloc = cur + bin_size;
-        Ok(self.total_alloc as *mut u8)
+        self.start = cur + bin_size;
+        self.external_frag += bin_size - size;
+        Ok(self.start as *mut u8)
     }
 
     /// Deallocates the memory referenced by `ptr`.
@@ -109,8 +113,24 @@ impl Allocator {
         unsafe {
             self.bins[num].push(ptr as *mut usize);
         }
-        self.total_alloc -= bin_size;
+        self.start -= bin_size;
     }
 }
 //
 // FIXME: Implement `Debug` for `Allocator`.
+impl fmt::Debug for Allocator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Allocator:")?;
+        writeln!(f, "    allocated: {}", self.start)?;
+        writeln!(f, "    end: {}", self.end)?;
+        writeln!(f, "    external fragmentation: {}", self.external_frag)?;
+        writeln!(f, "    max bin size: {}", self.max_size)?;
+        writeln!(f, "    Bins:")?;
+        let mut size = MIN_SIZE;
+        for bin in self.bins.iter() {
+            size.next_power_of_two();
+            writeln!(f, "        size: {} bin: {:#?}", size, bin)?;
+        }
+        Ok(())
+    }
+}
