@@ -28,7 +28,6 @@ impl Allocator {
             start,
             end,
             max_size,
-            internal_frag: 0,
             external_frag: 0,
         }
     }
@@ -70,6 +69,7 @@ impl Allocator {
     /// (`AllocError::Exhausted`) or `layout` does not meet this allocator's
     /// size or alignment constraints (`AllocError::Unsupported`).
     pub fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        assert!(layout.align().is_power_of_two());
         let size = cmp::max(layout.align(), layout.size());
         let num = Allocator::bin_num(size);
         let bin_size = Allocator::bin_size(size);
@@ -93,6 +93,13 @@ impl Allocator {
         self.external_frag += bin_size - size;
         Ok(self.start as *mut u8)
     }
+
+    // fn get_best_fit(&self, size: usize) -> Option<*mut usize> {
+    //     if self.bin[Allocator::bin_num(size)].head.is_null() {
+    //         return None;
+    //     }
+    //     while
+    // }
 
     /// Deallocates the memory referenced by `ptr`.
     ///
