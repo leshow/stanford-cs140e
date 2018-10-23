@@ -1,0 +1,1 @@
+I chose 32 classes, each increasing in size by pow2 starting from 8 bytes. It uses a bump allocator if the free list is empty, and a free block if one exists that fits the requested size.

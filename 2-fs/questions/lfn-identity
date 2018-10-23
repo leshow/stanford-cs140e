@@ -1,0 +1,3 @@
+The byte at offset 11 determines whether the entry is a regular entry or an LFN entry.
+Value of 0x0F : entry is an LFN entry.
+All other values : entry is a regular entry.

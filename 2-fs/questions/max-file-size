@@ -1,0 +1,1 @@
+a regular dir entry has a file size (offset 26) that's 4-bytes long. 4 bytes can only represent up to 2^32-1 = 4GB.

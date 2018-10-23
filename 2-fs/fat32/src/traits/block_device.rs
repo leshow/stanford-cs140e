@@ -35,9 +35,13 @@ pub trait BlockDevice: Send {
             vec.reserve(sector_size - available);
         }
 
-        unsafe { vec.set_len(start + sector_size); }
+        unsafe {
+            vec.set_len(start + sector_size);
+        }
         let read = self.read_sector(n, &mut vec[start..])?;
-        unsafe { vec.set_len(start + read); }
+        unsafe {
+            vec.set_len(start + read);
+        }
         Ok(read)
     }
 
@@ -89,4 +93,5 @@ macro impl_for_read_write_seek($(<$($gen:tt),*>)* $T:path) {
 impl_for_read_write_seek!(<'a> ::std::io::Cursor<&'a mut [u8]>);
 impl_for_read_write_seek!(::std::io::Cursor<Vec<u8>>);
 impl_for_read_write_seek!(::std::io::Cursor<Box<[u8]>>);
-#[cfg(test)] impl_for_read_write_seek!(::std::fs::File);
+#[cfg(test)]
+impl_for_read_write_seek!(::std::fs::File);

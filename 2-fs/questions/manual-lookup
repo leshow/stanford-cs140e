@@ -1,0 +1,24 @@
+get cluster # (N) of root dir (offset 44 2 bytes)
+figure out where root dir starts (first sector of cluster) = ((N-2) * sector_per_cluster (offset 13 1 byte)) + first_data_sector 
+FAT starting point = reserved sectors(offset 14 2 bytes) * bytes per sector (offset 11 2 bytes)
+data starting point = # FATs (offset 16 1 byte) * sectors per FAT (offset 36 4 bytes) * bytes per sector (offset 11 2 bytes)
+
+this one is the best:
+https://www.pjrc.com/tech/8051/ide/fat32.html
+
+https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system
+
+http://www.cs.uni.edu/~diesburg/courses/cop4610_fall10/week11/week11.pdf
+Summary of Finding Files/Dirs
+1.
+Find first cluster number in directory entry of interesting file or directory
+2.
+Figure out the sector to read using cluster number and FirstSectorofCluster equation Read that cluster
+3.
+Read that cluster
+4.
+Figure out if file or directory continues past cluster by looking up FAT[current cluster number]
+    > If EoC mark stop
+    > Else go to 3 with cluster=FAT[current cluster number]
+
+http://www.independent-software.com/operating-system-development-file-allocation-table-and-reading-from-disk.html
