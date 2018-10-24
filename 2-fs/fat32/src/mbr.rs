@@ -1,5 +1,4 @@
-use std::{fmt, io};
-
+use std::{fmt, io, mem, ptr, slice};
 use traits::BlockDevice;
 
 #[repr(C, packed)]
@@ -12,10 +11,10 @@ pub struct CHS {
 
 impl CHS {
     pub fn sector(self) -> u8 {
-        self.sector_upper & 0x0011_1111
+        self.sector_upper & 0b0011_1111
     }
     pub fn cylinder(self) -> u16 {
-        (self.sector_upper & 0x1100_0000) as u16 | self.cylinder_lower as u16
+        u16::from(self.sector_upper & 0b1100_0000) | u16::from(self.cylinder_lower)
     }
 }
 
@@ -33,19 +32,46 @@ impl fmt::Debug for CHS {
 #[derive(Clone)]
 pub struct BootFlag(u8);
 
-impl BootFlag {
-    pub fn active(&self) -> bool {
-        match self.0 {
-            0x0 => false,
-            0x80 => true,
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub enum BootStatus {
+    No,
+    Active,
+    Unknown,
+}
+
+impl BootStatus {
+    pub fn is_unknown(self) -> bool {
+        match self {
+            BootStatus::Unknown => true,
             _ => false,
+        }
+    }
+    pub fn is_active(self) -> bool {
+        match self {
+            BootStatus::Active => true,
+            _ => false,
+        }
+    }
+}
+
+impl BootFlag {
+    pub fn status(&self) -> BootStatus {
+        match self.0 {
+            0x0 => BootStatus::No,
+            0x80 => BootStatus::Active,
+            _ => BootStatus::Unknown,
         }
     }
 }
 
 impl fmt::Debug for BootFlag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let active = if self.active() { "ACTIVE" } else { "INACTIVE" };
+        let active = match self.status() {
+            BootStatus::Active => "ACTIVE",
+            BootStatus::No => "INACTIVE",
+            BootStatus::Unknown => "UNKNOWN",
+        };
         write!(f, "BootFlag: {}", active)
     }
 }
@@ -103,8 +129,20 @@ pub enum Error {
     BadSignature,
 }
 
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Error {
+        Error::Io(e)
+    }
+}
+
 impl MasterBootRecord {
     pub const VALID_BOOTSECTOR: u16 = 0xAA55;
+    pub fn read_signature(&self) -> bool {
+        match self.signature {
+            MasterBootRecord::VALID_BOOTSECTOR => true,
+            _ => false,
+        }
+    }
     /// Reads and returns the master boot record (MBR) from `device`.
     ///
     /// # Errors
@@ -114,9 +152,40 @@ impl MasterBootRecord {
     /// boot indicator. Returns `Io(err)` if the I/O error `err` occured while
     /// reading the MBR.
     pub fn from<T: BlockDevice>(mut device: T) -> Result<MasterBootRecord, Error> {
-        unimplemented!("MasterBootRecord::from()")
+        let mut buf = [0u8; 512];
+        let size = device.read_sector(0, &mut buf)?;
+        if size != 512 {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "MBR did not read correct size",
+            ))?;
+        }
+        let mbr = unsafe { mem::transmute::<_, MasterBootRecord>(buf) };
+        if !mbr.read_signature() {
+            return Err(Error::BadSignature);
+        }
+        for (i, entry) in mbr.entries.iter().enumerate() {
+            if !entry.boot_flag.status().is_unknown() {
+                return Err(Error::UnknownBootIndicator(i as u8));
+            }
+        }
+        Ok(mbr)
     }
 }
+// reinterpreting structs:
+// let ptr = buf.as_ptr() as *mut MasterBootRecord;
+// simply read it as another value (moves value out of src)
+// let _m = unsafe { ptr::read(ptr) };
+// changes [u8;512] into &mut [MasterBootRecord], then we move MBR out
+// let _m2 = unsafe {
+//     let m = slice::from_raw_parts_mut(ptr, 512);
+//     mem::replace(&mut m[0], mem::uninitialized())
+// };
+// same thing but with ptr::read
+// let _m = unsafe {
+//     let tmp = slice::from_raw_parts_mut(ptr, 512);
+//     ptr::read(&tmp[0])
+// };
 
 impl fmt::Debug for MasterBootRecord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
