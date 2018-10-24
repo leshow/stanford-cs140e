@@ -21,9 +21,9 @@ impl CHS {
 impl fmt::Debug for CHS {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("CHS")
-            .field("header: {}", &self.head)
-            .field("sector: {}", &self.sector())
-            .field("cylinder: {}", &self.cylinder())
+            .field("Header", &self.head)
+            .field("Sector", &self.sector())
+            .field("Cylinder", &self.cylinder())
             .finish()
     }
 }
@@ -72,7 +72,7 @@ impl fmt::Debug for BootFlag {
             BootStatus::No => "INACTIVE",
             BootStatus::Unknown => "UNKNOWN",
         };
-        write!(f, "BootFlag: {}", active)
+        write!(f, "BootFlag {}", active)
     }
 }
 
@@ -98,14 +98,16 @@ impl PartitionEntry {
 
 impl fmt::Debug for PartitionEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let active = if self.is_fat32() { "FAT32" } else { "UNKNOWN" };
-        write!(f, "Partition Type: {}", active);
-        f.debug_struct("Parition Entry: {}")
-            .field("flag: {:?}", &self.boot_flag)
-            .field("CHS start: {:?}", &self.chs_start)
-            .field("CHS end: {:?}", &self.chs_end)
-            .field("Sector LBA: {}", &self.sector_lba)
-            .field("Total sectors: {}", &self.sector_total)
+        f.debug_struct("Parition Entry {}")
+            .field("flag", &self.boot_flag)
+            .field("CHS start", &self.chs_start)
+            .field(
+                "Partition type",
+                &format_args!("{}", if self.is_fat32() { "FAT32" } else { "UNKNOWN" }),
+            )
+            .field("CHS end", &self.chs_end)
+            .field("Sector LBA", &self.sector_lba)
+            .field("Total sectors", &self.sector_total)
             .finish()
     }
 }
@@ -189,6 +191,25 @@ impl MasterBootRecord {
 
 impl fmt::Debug for MasterBootRecord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unimplemented!("MasterBootRecord::fmt()")
+        f.debug_struct("MBR")
+            .field(
+                "Disk ID",
+                &format_args!("{}", unsafe {
+                    std::str::from_utf8_unchecked(&self.disk_id)
+                }),
+            )
+            .field("Partition Entries", &self.entries)
+            .field(
+                "Magic Signature",
+                &format_args!(
+                    "{}",
+                    if self.read_signature() {
+                        "VALID"
+                    } else {
+                        "INVALID "
+                    },
+                ),
+            )
+            .finish()
     }
 }
