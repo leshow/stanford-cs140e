@@ -5,19 +5,92 @@ use traits::BlockDevice;
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
 pub struct CHS {
-    // FIXME: Fill me in.
+    head: u8,
+    sector_upper: u8,
+    cylinder_lower: u8,
+}
+
+impl CHS {
+    pub fn sector(self) -> u8 {
+        self.sector_upper & 0x0011_1111
+    }
+    pub fn cylinder(self) -> u16 {
+        (self.sector_upper & 0x1100_0000) as u16 | self.cylinder_lower as u16
+    }
+}
+
+impl fmt::Debug for CHS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CHS")
+            .field("header: {}", &self.head)
+            .field("sector: {}", &self.sector())
+            .field("cylinder: {}", &self.cylinder())
+            .finish()
+    }
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct BootFlag(u8);
+
+impl BootFlag {
+    pub fn active(&self) -> bool {
+        match self.0 {
+            0x0 => false,
+            0x80 => true,
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Debug for BootFlag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let active = if self.active() { "ACTIVE" } else { "INACTIVE" };
+        write!(f, "BootFlag: {}", active)
+    }
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PartitionEntry {
-    // FIXME: Fill me in.
+    boot_flag: BootFlag,
+    chs_start: CHS,
+    partition_type: u8,
+    chs_end: CHS,
+    sector_lba: u32,
+    sector_total: u32,
+}
+
+impl PartitionEntry {
+    pub fn is_fat32(&self) -> bool {
+        match self.partition_type {
+            0xB | 0xC => true,
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Debug for PartitionEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let active = if self.is_fat32() { "FAT32" } else { "UNKNOWN" };
+        write!(f, "Partition Type: {}", active);
+        f.debug_struct("Parition Entry: {}")
+            .field("flag: {:?}", &self.boot_flag)
+            .field("CHS start: {:?}", &self.chs_start)
+            .field("CHS end: {:?}", &self.chs_end)
+            .field("Sector LBA: {}", &self.sector_lba)
+            .field("Total sectors: {}", &self.sector_total)
+            .finish()
+    }
 }
 
 /// The master boot record (MBR).
 #[repr(C, packed)]
 pub struct MasterBootRecord {
-    // FIXME: Fill me in.
+    bootstrap: [u8; 436],
+    disk_id: [u8; 10],
+    entries: [PartitionEntry; 4],
+    signature: u16,
 }
 
 #[derive(Debug)]
@@ -31,6 +104,7 @@ pub enum Error {
 }
 
 impl MasterBootRecord {
+    pub const VALID_BOOTSECTOR: u16 = 0xAA55;
     /// Reads and returns the master boot record (MBR) from `device`.
     ///
     /// # Errors
