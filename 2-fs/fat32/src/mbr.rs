@@ -1,4 +1,4 @@
-use std::{fmt, io, mem, ptr, slice};
+use std::{fmt, io, mem};
 use traits::BlockDevice;
 
 #[repr(C, packed)]
@@ -88,11 +88,17 @@ pub struct PartitionEntry {
 }
 
 impl PartitionEntry {
-    pub fn is_fat32(&self) -> bool {
+    pub fn is_fat(&self) -> bool {
         match self.partition_type {
             0xB | 0xC => true,
             _ => false,
         }
+    }
+    pub fn fat_begin_lba(&self) -> Option<u32> {
+        if self.is_fat() {
+            return Some(self.sector_lba + self.sector_total);
+        }
+        None
     }
 }
 
@@ -103,7 +109,7 @@ impl fmt::Debug for PartitionEntry {
             .field("CHS start", &self.chs_start)
             .field(
                 "Partition type",
-                &format_args!("{}", if self.is_fat32() { "FAT32" } else { "UNKNOWN" }),
+                &format_args!("{}", if self.is_fat() { "FAT32" } else { "UNKNOWN" }),
             )
             .field("CHS end", &self.chs_end)
             .field("Sector LBA", &self.sector_lba)
@@ -118,7 +124,7 @@ pub struct MasterBootRecord {
     bootstrap: [u8; 436],
     disk_id: [u8; 10],
     entries: [PartitionEntry; 4],
-    signature: u16,
+    boot_sig: u16,
 }
 
 #[derive(Debug)]
@@ -139,11 +145,23 @@ impl From<io::Error> for Error {
 
 impl MasterBootRecord {
     pub const VALID_BOOTSECTOR: u16 = 0xAA55;
-    pub fn read_signature(&self) -> bool {
-        match self.signature {
+
+    pub fn has_mbr(&self) -> bool {
+        match self.boot_sig {
             MasterBootRecord::VALID_BOOTSECTOR => true,
             _ => false,
         }
+    }
+    pub fn first_fat_partition(&self) -> Option<u32> {
+        for entry in &self.entries {
+            if let Some(lba_start) = entry.fat_begin_lba() {
+                return Some(lba_start);
+            }
+        }
+        None
+    }
+    pub fn fat_partition_start<'a>(&'a self) -> impl Iterator<Item = u32> + 'a {
+        self.entries.iter().flat_map(|entry| entry.fat_begin_lba())
     }
     /// Reads and returns the master boot record (MBR) from `device`.
     ///
@@ -163,7 +181,7 @@ impl MasterBootRecord {
             ))?;
         }
         let mbr = unsafe { mem::transmute::<_, MasterBootRecord>(buf) };
-        if !mbr.read_signature() {
+        if !mbr.has_mbr() {
             return Err(Error::BadSignature);
         }
         for (i, entry) in mbr.entries.iter().enumerate() {
@@ -200,15 +218,8 @@ impl fmt::Debug for MasterBootRecord {
             )
             .field("Partition Entries", &self.entries)
             .field(
-                "Magic Signature",
-                &format_args!(
-                    "{}",
-                    if self.read_signature() {
-                        "VALID"
-                    } else {
-                        "INVALID "
-                    },
-                ),
+                "MBR: {}",
+                &format_args!("{}", if self.has_mbr() { "YES" } else { "NO " },),
             )
             .finish()
     }
