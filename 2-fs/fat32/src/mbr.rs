@@ -147,10 +147,7 @@ impl MasterBootRecord {
     pub const VALID_BOOTSECTOR: u16 = 0xAA55;
 
     pub fn has_mbr(&self) -> bool {
-        match self.boot_sig {
-            MasterBootRecord::VALID_BOOTSECTOR => true,
-            _ => false,
-        }
+        self.boot_sig == MasterBootRecord::VALID_BOOTSECTOR
     }
     pub fn first_fat_partition(&self) -> Option<u32> {
         for entry in &self.entries {
