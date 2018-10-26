@@ -29,13 +29,9 @@ impl fmt::Debug for CHS {
 }
 
 #[repr(C)]
-#[derive(Clone)]
-pub struct BootFlag(u8);
-
-#[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum BootStatus {
-    No,
+    Inactive,
     Active,
     Unknown,
 }
@@ -53,26 +49,47 @@ impl BootStatus {
             _ => false,
         }
     }
+    pub fn is_inactive(self) -> bool {
+        match self {
+            BootStatus::Inactive => true,
+            _ => false,
+        }
+    }
 }
 
+impl fmt::Debug for BootStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let active = match self {
+            BootStatus::Active => "ACTIVE",
+            BootStatus::Inactive => "INACTIVE",
+            BootStatus::Unknown => "UNKNOWN",
+        };
+        write!(f, "BootFlag {}", active)
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq)]
+pub struct BootFlag(u8);
+
 impl BootFlag {
-    pub fn status(&self) -> BootStatus {
+    pub fn status(self) -> BootStatus {
         match self.0 {
-            0x0 => BootStatus::No,
+            0x00 => BootStatus::Inactive,
             0x80 => BootStatus::Active,
             _ => BootStatus::Unknown,
         }
+    }
+    pub fn value(self) -> u8 {
+        self.0
     }
 }
 
 impl fmt::Debug for BootFlag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let active = match self.status() {
-            BootStatus::Active => "ACTIVE",
-            BootStatus::No => "INACTIVE",
-            BootStatus::Unknown => "UNKNOWN",
-        };
-        write!(f, "BootFlag {}", active)
+        f.debug_struct("BootFlag")
+            .field("status", &format_args!("{:?}", self.status()))
+            .finish()
     }
 }
 
@@ -182,7 +199,7 @@ impl MasterBootRecord {
             return Err(Error::BadSignature);
         }
         for (i, entry) in mbr.entries.iter().enumerate() {
-            if !entry.boot_flag.status().is_unknown() {
+            if entry.boot_flag.status().is_unknown() {
                 return Err(Error::UnknownBootIndicator(i as u8));
             }
         }
@@ -219,5 +236,28 @@ impl fmt::Debug for MasterBootRecord {
                 &format_args!("{}", if self.has_mbr() { "YES" } else { "NO " },),
             )
             .finish()
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+    #[test]
+    fn test_mbr_sig() {
+        let mut buf = [0u8; 512];
+        buf[510] = 0x55;
+        buf[511] = 0xAA;
+        let mbr = MasterBootRecord::from(Cursor::new(&mut buf[..])).unwrap();
+        assert!(mbr.has_mbr());
+    }
+    #[test]
+    fn test_mbr_invalid_sig() {
+        let mut buf = [0u8; 512];
+        buf[510] = 0x00;
+        buf[511] = 0xAA;
+        match MasterBootRecord::from(Cursor::new(&mut buf[..])) {
+            Err(Error::BadSignature) => assert!(true),
+            _ => assert!(false),
+        }
     }
 }

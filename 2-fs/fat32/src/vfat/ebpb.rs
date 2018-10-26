@@ -120,3 +120,28 @@ impl fmt::Debug for BiosParameterBlock {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+    #[test]
+    fn test_bpb_sig() {
+        let mut buf = [0u8; 512];
+        buf[510] = 0x55;
+        buf[511] = 0xAA;
+        let bpb = BiosParameterBlock::from(Cursor::new(&mut buf[..]), 0).unwrap();
+        println!("{:#?}", bpb);
+        assert!(bpb.valid());
+    }
+    #[test]
+    fn test_bpb_invalid_sig() {
+        let mut buf = [0u8; 512];
+        buf[510] = 0x00;
+        buf[511] = 0xAA;
+        match BiosParameterBlock::from(Cursor::new(&mut buf[..]), 0) {
+            Err(Error::BadSignature) => assert!(true),
+            _ => assert!(false),
+        }
+    }
+}
