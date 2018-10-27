@@ -9,12 +9,15 @@ pub struct CHS {
     cylinder_lower: u8,
 }
 
+const UPPER_MASK: u8 = (-1i8 << 6) as u8;
+const LOWER_MASK: u8 = (1 << 6) - 1 as u8;
+
 impl CHS {
     pub fn sector(self) -> u8 {
-        self.sector_upper & 0b0011_1111
+        self.sector_upper & LOWER_MASK
     }
     pub fn cylinder(self) -> u16 {
-        u16::from(self.sector_upper & 0b1100_0000) | u16::from(self.cylinder_lower)
+        u16::from(self.sector_upper & UPPER_MASK) | u16::from(self.cylinder_lower)
     }
 }
 
