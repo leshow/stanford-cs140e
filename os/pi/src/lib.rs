@@ -17,3 +17,5 @@ pub mod common;
 pub mod gpio;
 pub mod timer;
 pub mod uart;
+pub mod atags;
+pub mod interrupt;

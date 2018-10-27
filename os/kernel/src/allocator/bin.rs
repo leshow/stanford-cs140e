@@ -124,7 +124,7 @@ impl Allocator {
         self.start -= bin_size;
     }
 }
-//
+
 // FIXME: Implement `Debug` for `Allocator`.
 impl fmt::Debug for Allocator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

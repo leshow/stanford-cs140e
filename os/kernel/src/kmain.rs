@@ -9,6 +9,12 @@
 #![feature(use_nested_groups)]
 #![feature(exclusive_range_pattern)]
 #![feature(raw_vec_internals)]
+#![feature(i128_type)]
+#![feature(never_type)]
+#![feature(unique)]
+#![feature(pointer_methods)]
+#![feature(naked_functions)]
+#![feature(fn_must_use)]
 #![feature(alloc, allocator_api, global_allocator)]
 
 #[macro_use]
@@ -25,10 +31,16 @@ pub mod fs;
 pub mod lang_items;
 pub mod mutex;
 pub mod shell;
+pub mod fs;
+pub mod traps;
+pub mod aarch64;
+pub mod process;
+pub mod vm;
 
 #[cfg(not(test))]
 use allocator::Allocator;
 use fs::FileSystem;
+use process::GlobalScheduler;
 
 #[cfg(not(test))]
 #[global_allocator]
@@ -38,6 +50,7 @@ pub static FILE_SYSTEM: FileSystem = FileSystem::uninitialized();
 
 #[cfg(not(test))]
 use console::kprintln;
+pub static SCHEDULER: GlobalScheduler = GlobalScheduler::uninitialized();
 
 #[no_mangle]
 #[cfg(not(test))]
