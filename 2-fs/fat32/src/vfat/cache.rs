@@ -1,25 +1,34 @@
-use std::{io, fmt};
 use std::collections::HashMap;
+use std::{
+    fmt,
+    io::{self, Write},
+};
 
 use traits::BlockDevice;
 
 #[derive(Debug)]
 struct CacheEntry {
     data: Vec<u8>,
-    dirty: bool
+    dirty: bool,
+}
+
+impl CacheEntry {
+    pub fn new(data: Vec<u8>) -> Self {
+        CacheEntry { dirty: false, data }
+    }
 }
 
 pub struct Partition {
     /// The physical sector where the partition begins.
     pub start: u64,
     /// The size, in bytes, of a logical sector in the partition.
-    pub sector_size: u64
+    pub sector_size: u64,
 }
 
 pub struct CachedDevice {
-    device: Box<BlockDevice>,
+    device: Box<dyn BlockDevice>,
     cache: HashMap<u64, CacheEntry>,
-    partition: Partition
+    partition: Partition,
 }
 
 impl CachedDevice {
@@ -43,14 +52,15 @@ impl CachedDevice {
     ///
     /// Panics if the partition's sector size is < the device's sector size.
     pub fn new<T>(device: T, partition: Partition) -> CachedDevice
-        where T: BlockDevice + 'static
+    where
+        T: BlockDevice + 'static,
     {
         assert!(partition.sector_size >= device.sector_size());
 
         CachedDevice {
             device: Box::new(device),
             cache: HashMap::new(),
-            partition: partition
+            partition: partition,
         }
     }
 
@@ -70,6 +80,18 @@ impl CachedDevice {
         }
     }
 
+    fn load_cache(&mut self, sector: u64) -> io::Result<()> {
+        if !self.cache.contains_key(&sector) {
+            let (physical_sector, factor) = self.virtual_to_physical(sector);
+            let mut buf = Vec::with_capacity((self.device.sector_size() * factor) as usize);
+            for i in 0..factor {
+                self.device.read_all_sector(physical_sector + i, &mut buf)?;
+            }
+            self.cache.insert(sector, CacheEntry::new(buf));
+        }
+        Ok(())
+    }
+
     /// Returns a mutable reference to the cached sector `sector`. If the sector
     /// is not already cached, the sector is first read from the disk.
     ///
@@ -81,7 +103,13 @@ impl CachedDevice {
     ///
     /// Returns an error if there is an error reading the sector from the disk.
     pub fn get_mut(&mut self, sector: u64) -> io::Result<&mut [u8]> {
-        unimplemented!("CachedDevice::get_mut()")
+        self.load_cache(sector)?;
+        let entry = self
+            .cache
+            .get_mut(&sector)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cache entry not found"))?;
+        entry.dirty = true;
+        Ok(entry.data.as_mut_slice())
     }
 
     /// Returns a reference to the cached sector `sector`. If the sector is not
@@ -91,12 +119,36 @@ impl CachedDevice {
     ///
     /// Returns an error if there is an error reading the sector from the disk.
     pub fn get(&mut self, sector: u64) -> io::Result<&[u8]> {
-        unimplemented!("CachedDevice::get()")
+        self.load_cache(sector)?;
+        let entry = self
+            .cache
+            .get(&sector)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cache entry not found"))?;
+        Ok(entry.data.as_slice())
     }
 }
 
 // FIXME: Implement `BlockDevice` for `CacheDevice`. The `read_sector` and
 // `write_sector` methods should only read/write from/to cached sectors.
+// TODO is it supposed to load the cache also or not???
+
+impl BlockDevice for CachedDevice {
+    fn sector_size(&self) -> u64 {
+        self.partition.sector_size
+    }
+    fn read_sector(&mut self, n: u64, mut buf: &mut [u8]) -> io::Result<usize> {
+        let data = self.get(n)?;
+        buf.write(data)
+        // let read = &self.cache[&n];
+        // buf.write(&read.data[..])
+    }
+    fn write_sector(&mut self, n: u64, buf: &[u8]) -> io::Result<usize> {
+        // let read = self.cache.get_mut(&n).unwrap();
+        // read.data.write(&buf)
+        let mut data = self.get_mut(n)?;
+        data.write(buf)
+    }
+}
 
 impl fmt::Debug for CachedDevice {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -104,5 +156,67 @@ impl fmt::Debug for CachedDevice {
             .field("device", &"<block device>")
             .field("cache", &self.cache)
             .finish()
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+    #[test]
+    fn test_cache_read() {
+        static mut DATA: [u8; 1024] = [0u8; 1024];
+        // set some data
+        unsafe {
+            DATA[0] = 255;
+            DATA[512] = 1;
+        }
+        let device = unsafe { Cursor::new(&mut DATA[..]) };
+        let partition = Partition {
+            start: 0,
+            sector_size: 512,
+        };
+        let mut cache = CachedDevice::new(device, partition);
+        let mut sector1 = [0u8; 512];
+        assert_eq!(cache.read_sector(0, &mut sector1).unwrap(), 512);
+        assert_eq!(sector1[0], 255);
+        assert_eq!(cache.read_sector(1, &mut sector1).unwrap(), 512);
+        assert_eq!(sector1[0], 1);
+    }
+
+    #[test]
+    fn test_cache_write() {
+        static mut DATA: [u8; 1024] = [0u8; 1024];
+        // set some data
+        unsafe {
+            DATA[0] = 255;
+        }
+        let device = unsafe { Cursor::new(&mut DATA[..]) };
+        let partition = Partition {
+            start: 0,
+            sector_size: 512,
+        };
+        let mut cache = CachedDevice::new(device, partition);
+        let mut sector1 = [0u8; 512];
+        sector1[0] = 1;
+        assert_eq!(cache.write_sector(0, &sector1).unwrap(), 512);
+        let mut read = [0u8; 512];
+        assert_eq!(cache.read_sector(0, &mut read).unwrap(), 512);
+        // should be 1 not 255
+        assert_eq!(read[0], 1);
+    }
+
+    #[test]
+    fn test_cache_bounds() {
+        static mut DATA: [u8; 1024] = [0u8; 1024];
+        let device = unsafe { Cursor::new(&mut DATA[..]) };
+        let partition = Partition {
+            start: 0,
+            sector_size: 512,
+        };
+        let mut cache = CachedDevice::new(device, partition);
+        let mut sector1 = [0u8; 512];
+        cache
+            .read_sector(3, &mut sector1)
+            .expect_err("Out of bounds");
     }
 }
