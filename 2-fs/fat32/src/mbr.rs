@@ -1,4 +1,4 @@
-use std::{fmt, io, mem};
+use std::{fmt, io, mem, str};
 use traits::BlockDevice;
 
 #[repr(C, packed)]
@@ -62,7 +62,7 @@ impl BootStatus {
 
 impl fmt::Debug for BootStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let active = match self {
+        let active = match *self {
             BootStatus::Active => "ACTIVE",
             BootStatus::Inactive => "INACTIVE",
             BootStatus::Unknown => "UNKNOWN",
@@ -229,9 +229,7 @@ impl fmt::Debug for MasterBootRecord {
         f.debug_struct("MBR")
             .field(
                 "Disk ID",
-                &format_args!("{}", unsafe {
-                    std::str::from_utf8_unchecked(&self.disk_id)
-                }),
+                &format_args!("{}", unsafe { str::from_utf8_unchecked(&self.disk_id) }),
             )
             .field("Partition Entries", &self.entries)
             .field(

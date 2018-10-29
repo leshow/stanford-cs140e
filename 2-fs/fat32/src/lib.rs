@@ -1,5 +1,11 @@
 #![allow(dead_code, unused_imports)]
-#![feature(decl_macro, conservative_impl_trait)]
+#![feature(
+    decl_macro,
+    conservative_impl_trait,
+    use_nested_groups,
+    dyn_trait,
+    dotdoteq_in_patterns
+)]
 #![allow(safe_packed_borrows)]
 
 #[cfg(not(target_endian = "little"))]

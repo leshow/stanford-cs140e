@@ -1,4 +1,4 @@
-use std::{fmt, io, mem};
+use std::{fmt, io, mem, str};
 
 use traits::BlockDevice;
 use vfat::Error;
@@ -113,9 +113,7 @@ impl fmt::Debug for BiosParameterBlock {
             )
             .field(
                 "Volume label",
-                &format_args!("{}", unsafe {
-                    std::str::from_utf8_unchecked(&self.vol_label)
-                }),
+                &format_args!("{}", unsafe { str::from_utf8_unchecked(&self.vol_label) }),
             )
             .finish()
     }
